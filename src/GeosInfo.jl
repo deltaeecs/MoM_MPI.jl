@@ -65,3 +65,22 @@ function getGeosInfo(fn)
     return geosInfolw
 
 end
+
+"""
+获取几何信息数组的区间，针对普通 AbstractVector 派发
+"""
+function getGeosInterval(geosInfo::T) where {T<:AbstractVector}
+    ngeo   =   length(geosInfo)
+    return 1:ngeo
+end
+
+"""
+获取几何信息数组的区间，针对 OffsetVector 分别派发
+"""
+function getGeosInterval(geosInfo::T) where {T<:OffsetVector}
+    ngeo   =   length(geosInfo)
+    st      =   (eachindex(geosInfo).offset) + 1
+    st:(st - 1 + ngeo)
+end
+
+

@@ -183,3 +183,45 @@ function initialZchunksMulV!(Z::T, level) where{T<:ZnearChunksStructMPI}
 end
 
 
+"""
+根据积分方程类型选择相应计算函数
+"""
+function calZnearChunks!(cubes, geosInfo::AbstractVector{VSCellT}, 
+    ZnearChunks, bfT::Type{BFT} = VSBFTypes.sbfType) where {BFT<:BasisFunctionType, VSCellT<:SurfaceCellType}
+    if SimulationParams.ieT == :EFIE
+        # 计算 RWG下 的 EFIE 阻抗矩阵
+        calZnearChunksEFIE!(cubes, geosInfo, ZnearChunks.chunks, bfT)
+    elseif SimulationParams.ieT == :MFIE
+        # 计算 RWG下 的 MFIE 阻抗矩阵
+        calZnearChunksMFIE!(cubes, geosInfo, ZnearChunks.chunks, bfT)
+    elseif SimulationParams.ieT == :CFIE
+        # 计算 RWG下 的 CFIE 阻抗矩阵
+        calZnearChunksCFIE!(cubes, geosInfo, ZnearChunks.chunks, bfT)
+    end
+    return nothing
+end
+
+"""
+根据积分方程类型选择相应计算函数
+"""
+function calZnearChunks!(cubes, geosInfo::AbstractVector{VSCellT}, 
+    ZnearChunks, bfT::Type{BFT} = VSBFTypes.vbfType) where {BFT<:BasisFunctionType, VSCellT<:VolumeCellType}
+    # 计算 SWG/PWC/RBF 下的 EFIE 阻抗矩阵
+    calZnearChunksEFIE!(cubes, geosInfo, ZnearChunks.chunks, bfT)
+    nothing
+end
+
+"""
+根据积分方程类型选择相应计算函数
+"""
+function calZnearChunks!(cubes, geosInfo::AbstractVector{VT}, 
+    ZnearChunks, bfT::Type{BFT} = VSBFTypes.vbfType) where {BFT<:BasisFunctionType, VT<:AbstractVector}
+    # 计算 RWG + PWC/RBF 下的 EFIE 阻抗矩阵
+    calZnearChunksEFIE!(cubes, geosInfo..., ZnearChunks.chunks, bfT)
+
+    nothing
+end
+
+include("ZChunks/ZnearChunkEFIE.jl")
+include("ZChunks/ZnearChunkCFIE.jl")
+include("ZChunks/ZnearChunkEFIEVSIE.jl")

@@ -3,12 +3,13 @@ module MoM_MPI
 using MoM_Basics, MoM_Kernels
 using MPI, MPIArray4MoMs
 using OffsetArrays, SparseArrays
+using LinearAlgebra
 using .Threads, ThreadsX, FLoops, FoldsThreads
-using UnPack, JLD2
+using UnPack, JLD2, ProgressMeter
 
 export  ParallelParams, set_nprocs!,
         MPIvecOnLevel,
-        initialZnearChunksMPI,
+        initialZnearChunksMPI, calZnearChunks!,
         getGeoIDsInCubeChunk, getNeighborCubeIDs, saveGeosInfoChunks, getGeosInfo,
         LevelInfoMPI, getFarNeighborCubeIDs, saveCubes, saveLevel, 
         loadCubes, loadMPILevel!, loadMPILevel,
