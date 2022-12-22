@@ -6,7 +6,7 @@ include("GenerateOctreeAndSave.jl")
 
 @testset "MoM_MPI.jl" begin
     # Write your tests here.
-    meshData, εᵣs   =  getMeshData(filename; meshUnit=:mm);
+    meshData, εᵣs   =  getMeshDataSaveGeosInterval(filename; meshUnit=:mm);
     @test true
 
     @testset "Host" begin
@@ -23,5 +23,7 @@ include("GenerateOctreeAndSave.jl")
         # 运行$(ParallelParams.nprocs)
         mpiexec(cmd -> run(`$cmd -n $(ParallelParams.nprocs) $(Base.julia_cmd()) -t 1 --project=. runtests_MPI.jl`))
     end
+
+    rm("results"; force = true, recursive = true)
 
 end

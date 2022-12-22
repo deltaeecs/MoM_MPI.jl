@@ -56,6 +56,24 @@ function saveGeosInfoChunks(geos::AbstractVector, cubes, name::AbstractString, n
 
 end
 
+function getMeshDataSaveGeosInterval(filename; meshUnit=:mm, dir = "temp/GeosInfo");
+    meshData, εᵣs   =  getMeshData(filename; meshUnit=meshUnit);
+    saveGeoInterval(meshData; dir = dir)
+    return meshData, εᵣs   
+end
+
+function saveGeoInterval(meshData; dir = "")
+    data = (tri = 1:meshData.trinum, tetra = (meshData.trinum + 1):(meshData.trinum + meshData.tetranum),
+            hexa = (meshData.trinum + meshData.tetranum + 1):meshData.geonum,)
+    jldsave(joinpath(dir, "geoInterval.jld2"), data = data)
+    nothing
+end
+
+function loadGeoInterval(fn)
+    load(fn, "data")
+end
+
+
 function getGeosInfo(fn)
 
     @unpack data, size, indice = load(fn)
@@ -66,21 +84,27 @@ function getGeosInfo(fn)
 
 end
 
+using MoM_Kernels:getGeosInterval
+
 """
-获取几何信息数组的区间，针对普通 AbstractVector 派发
+获取几何信息数组的区间，针对 AbstractVector{TriangleInfo} 派发
 """
-function getGeosInterval(geosInfo::T) where {T<:AbstractVector}
-    ngeo   =   length(geosInfo)
-    return 1:ngeo
+function MoM_Kernels.getGeosInterval(::AbstractVector{T})::UnitRange{Int} where {T<:TriangleInfo}
+    return GeosInterval.tri
 end
 
 """
-获取几何信息数组的区间，针对 OffsetVector 分别派发
+获取几何信息数组的区间，针对 AbstractVector{TetrahedraInfo} 派发
 """
-function getGeosInterval(geosInfo::T) where {T<:OffsetVector}
-    ngeo   =   length(geosInfo)
-    st      =   (eachindex(geosInfo).offset) + 1
-    st:(st - 1 + ngeo)
+function MoM_Kernels.getGeosInterval(::AbstractVector{T})::UnitRange{Int} where {T<:TetrahedraInfo}
+    return GeosInterval.tetra
+end
+
+"""
+获取几何信息数组的区间，针对 AbstractVector{HexahedraInfo} 派发
+"""
+function MoM_Kernels.getGeosInterval(::AbstractVector{T})::UnitRange{Int} where {T<:HexahedraInfo}
+    return GeosInterval.hexa
 end
 
 

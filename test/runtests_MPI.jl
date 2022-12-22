@@ -8,6 +8,7 @@ updateVSBFTParams!(;vbfT = vbfT)
 
 @testset "MPI_Solving" begin
     # 几何信息与八叉树信息
+    set_geosInterval!("temp/GeosInfo/geoInterval.jld2")
     geosInfo = getGeosInfo("temp/GeosInfo/geosInfo_part_$(comm_rank + 1).jld2")
     octree = loadOctree("temp/OctreeInfo/Octree.jld2", np = ParallelParams.nprocs)
     MPI.Barrier(comm)
@@ -48,4 +49,10 @@ updateVSBFTParams!(;vbfT = vbfT)
     calZnearChunks!(leafCubes, geosInfo, ZnearChunksMPI)
     @test true
 
+    # 构建矩阵向量乘积算子
+    Zopt  =   MLMFAIterator(ZnearChunksMPI, octree, geosInfo);
+    @test true
 end
+
+
+MPI.Finalize()

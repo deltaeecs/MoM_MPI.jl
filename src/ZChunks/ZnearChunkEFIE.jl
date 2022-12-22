@@ -55,9 +55,6 @@ function getGeoIDsInNearCubes(cube, cubes)
 
 end
 
-getGhostGeos(y::MPIVector) = sparsevec(y.ghostindices[1], y.ghostdata)
-
-
 """
 采用 RWG 基函数计算 EFIE 面积分（SIE）阻抗矩阵近场元并将结果放在Znear稀疏矩阵中
 """
@@ -294,7 +291,6 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
 
     # 是否为偏置数组（用于混合网格）
     geoInterval =   getGeosInterval(geosInfo)
-    nearCubeBFindices = Znear.colIndices
     # 对场盒子内四面体循环
     # @inbounds for iGeo in 1:length(nearCubesGeoID)
     @inbounds for tid in cubeGeoID
@@ -406,30 +402,30 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
     # 网格区间
     geoInterval =   getGeosInterval(geosInfo)
     nearCubeBFindices = Znear.colIndices
-    # 对场盒子内四面体循环
+    # 对场盒子内六面体循环
     # @inbounds for iGeo in 1:length(nearCubesGeoID)
     @inbounds for tid in cubeGeoID
         
-        # 局域的场四面体
+        # 局域的场六面体
         !(tid in geoInterval) && continue
         geot  =   geosInfo[tid]
-        #= 场四面体与源四面体在不在一个盒子？因为程序利用了目标的EFIE矩阵的对称性
+        #= 场六面体与源六面体在不在一个盒子？因为程序利用了目标的EFIE矩阵的对称性
         进行对称位置阻抗矩阵元的计算，要避免对同一个盒子内阻抗矩阵元的重复计算 =#
         # tins  =   nearCubesGeoID[iGeo] in cubeGeoID
         # tins  =   !isempty(searchsorted(cubeGeoID, nearCubesGeoID[iGeo]))
-        # 测试四面体包含的四个测试基函数是否在当前盒子（测试盒子）的基函数（测试基函数）区间内
+        # 测试六面体包含的六个测试基函数是否在当前盒子（测试盒子）的基函数（测试基函数）区间内
         msInInterval    =   [m in cubeBFinterval for m in geot.inBfsID]
         # 局部判断奇异性距离
         Rsglrlc =   Rsglr/sqrt(norm(geot.ε)/ε_0)
-        # 对源四面体循环
+        # 对源六面体循环
         for sid in nearCubesGeoID
             
             !(sid in geoInterval) && continue
-            # 源四面体
+            # 源六面体
             geos    =   geosInfo[sid]
             # 场源距离
             Rts     =   dist(geot.center, geos.center)
-            # 源四面体包含的四个源基函数是否在所有邻盒子（源盒子）的基函数（源基函数）区间内
+            # 源六面体包含的六个源基函数是否在所有邻盒子（源盒子）的基函数（源基函数）区间内
             nsInInterval    =   [!isempty(searchsorted(nearCubeBFindices, n)) for n in geos.inBfsID]
 
             # 判断二者远近，调用不同精度的矩阵元处理函数
@@ -754,8 +750,8 @@ function calZnearChunksEFIE!(cubes, geosInfo::AbstractVector{GT},
     # 本进程索引
     idcs    =   ZnearChunks.indices[1]
     # 本地数据
-    cubeslw         =   getGhostGeos(cubes)
-    ZnearChunkslc   =   getGhostGeos(ZnearChunks)
+    cubeslw         =   getGhostMPIVecs(cubes)
+    ZnearChunkslc   =   getGhostMPIVecs(ZnearChunks)
     # 进度条
     cond = true
     if cond
@@ -782,8 +778,8 @@ function calZnearChunksEFIE!(cubes, geosInfo1::AbstractVector{T1}, geosInfo2::Ab
     # 本进程索引
     idcs    =   ZnearChunks.indices[1]
     # 本地数据
-    cubeslw         =   getGhostGeos(cubes)
-    ZnearChunkslc   =   getGhostGeos(ZnearChunks)
+    cubeslw         =   getGhostMPIVecs(cubes)
+    ZnearChunkslc   =   getGhostMPIVecs(ZnearChunks)
     # 进度条
     cond = true
     if cond

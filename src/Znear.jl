@@ -44,7 +44,39 @@ function ZnearChunksStructMPI{T}(chunks; m, n, comm = MPI.COMM_WORLD, rank = MPI
     ZnearChunksStructMPI{T}(m, n, nChunks, chunks, lmul, lmuld, rmul, rmuld)
 end
 
-getGhostCubes(cubes) = sparsevec(cubes.ghostindices[1], cubes.ghostdata)
+"""
+实现左乘其它向量
+"""
+function Base.:*(Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
+    # initialZchunksMulV!(Z)
+    nthds   =   nthreads()
+    BLAS.set_num_threads(1)
+    @inbounds @threads  for ii in 1:Z.nChunks
+        copyto!(view(Z.rmul, Z.chunks[ii].rowIndices), Z.chunks[ii] * x)
+    end
+    BLAS.set_num_threads(nthds)
+
+    return copy(Z.rmul)
+end
+
+function LinearAlgebra.mul!(y::MPIVector, Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
+    # initialZchunksMulV!(Z)
+    nthds   =   nthreads()
+    BLAS.set_num_threads(1)
+    sync!(x)
+    xghost = getGhostMPIVecs(x)
+    @inbounds @threads  for ii in Z.chunks.indices[1]
+        mul!(view(Z.rmul, Z.chunks[ii].rowIndices), Z.chunks[ii], xghost)
+    end
+    BLAS.set_num_threads(nthds)
+
+    MPI.Barrier(x.comm)
+    copyto!(y, Z.rmul)
+    sync!(y)
+
+    return y
+end
+
 
 """
 根据八叉树盒子信息初始化 cube 对应的近场矩阵元块儿
@@ -55,7 +87,7 @@ function initialZnearChunks(cube, cubes::MPIVector; CT = Complex{Precision.FT})
     rowIndices  =   cube.bfInterval
 
     # 本地数据
-    cubeslw     =   getGhostCubes(cubes)
+    cubeslw     =   getGhostMPIVecs(cubes)
 
     # 对其邻盒循环
     colIndices  =   Int[]
@@ -71,13 +103,12 @@ function initialZnearChunks(cube, cubes::MPIVector; CT = Complex{Precision.FT})
 end
 
 """
-根据八叉树盒子信息初始化 cube 对应的近场矩阵元块儿
+根据八叉树盒子信息初始化 cube 对应的近场矩阵元块儿，不分配 ghost 数据因为会带来大约双倍内存需求
 """
 function initialZnearChunksMPI(level; nbf, CT = Complex{Precision.FT}, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm))
 
     # 本进程的 ghostchunks (包含了在计算预条件时用到的远亲)
     cubes       =   level.cubes
-    ghostcubes  =   getGhostCubes(cubes)
 
     # chunks 的 MPI 分结构与 cubes 类似, 因此可利用 cubes 的分布信息来构建
     indices     =   cubes.indices
@@ -85,18 +116,13 @@ function initialZnearChunksMPI(level; nbf, CT = Complex{Precision.FT}, comm = MP
     rank2indices=   cubes.rank2indices
 
     # ghostdata 仅需要邻盒子部分
-    ghostindices = getNeighborCubeIDs(cubes, indices)
-    ghostdata   =  [initialZnearChunks(ghostcubes[i], cubes; CT = CT) for i in ghostindices[1]]
+    ghostindices = indices
+    ghostdata   =  [initialZnearChunks(cubes[i], cubes; CT = CT) for i in indices[1]]
 
-    # ghost rank to ghost indices
-    ghostranks      = indice2ranks(ghostindices, rank2indices)
-    grank2gindices  = grank2ghostindices(ghostranks, ghostindices, rank2indices; localrank = rank)
-
-    # remote rank to ghost indices
-    rank2ghostindices  =  get_rank2ghostindices(ghostranks, indices, ghostindices; comm = comm, rank = rank)
-    # 最终获得远程进程所需数据在本进程存储的 indices 上的位置
-    remoteranks     = indice2ranks(indices, rank2ghostindices)
-    rrank2indices   = remoterank2indices(remoteranks, indices, rank2ghostindices; localrank = rank)
+    # ghost rank to ghost indices (空)
+    grank2gindices  = typeof(rank2indices)()
+    # 最终获得远程进程所需数据在本进程存储的 indices 上的位置 (空)
+    rrank2indices   = typeof(rank2indices)()
     dataInGhostData = Tuple(map((i, gi) -> begin    st = searchsortedfirst(gi, i[1]); 
                                                     ed = st + length(i) - 1;
                                                     st:ed; end , indices, ghostindices))
@@ -123,7 +149,7 @@ end
 function MPIvecOnLevel(cubes::MPIVector{C, I}; T = Precision.CT, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where {C<:CubeInfo, I}
 
     # 本进程MPI盒子
-    cubeslw = getGhostCubes(cubes)
+    cubeslw = getGhostMPIVecs(cubes)
 
     # 所有涉及的邻盒子 id
     nearCubesIndices = getNeighborCubeIDs(cubes, cubes.indices)

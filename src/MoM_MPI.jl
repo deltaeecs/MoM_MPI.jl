@@ -8,6 +8,7 @@ using .Threads, ThreadsX, FLoops, FoldsThreads
 using UnPack, JLD2, ProgressMeter
 
 export  ParallelParams, set_nprocs!,
+        getMeshDataSaveGeosInterval, set_geosInterval!,
         MPIvecOnLevel,
         initialZnearChunksMPI, calZnearChunks!,
         getGeoIDsInCubeChunk, getNeighborCubeIDs, saveGeosInfoChunks, getGeosInfo,
@@ -25,10 +26,11 @@ include("Common_Utlis.jl")
 include("GeosInfo.jl")
 
 # 涉及 MPI 数据的八叉树、层的 IO 等
-include("LevelInfo.jl")
-include("OctreeInfo.jl")
+include("MLFMA.jl")
 
 # 涉及阻抗矩阵
 include("Znear.jl")
+
+# 涉及MLFMA
 
 end

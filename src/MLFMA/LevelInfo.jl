@@ -1,4 +1,4 @@
-using MoM_Kernels:AbstractLevel, CubeInfo, PolesInfo, InterpInfo
+using MoM_Kernels:AbstractLevel, CubeInfo, PolesInfo, InterpInfo, memoryAllocationOnLevels!
 
 """
 层信息（MPI分布式）
@@ -171,4 +171,38 @@ function loadMPILevel(fn, cubefn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(co
     loadMPILevel!(level, fn, cubefn; comm = comm, rank = rank, np = np)
 
     return level
+end
+
+
+"""
+预分配各层上的聚合项、解聚项
+"""
+function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT, LV}; np = MPI.Comm_size(MPI.COMM_WORLD)) where{IT<:Integer, LV<:LevelInfoMPI}
+
+    # 用到的浮点数类型
+    FT = typeof(levels[nLevels].cubeEdgel) 
+
+    for iLevel in nLevels:-1:2
+        level   =   levels[iLevel]
+        # 本层盒子数
+        nCubes  =   level.nCubes
+        # 多极子数
+        sizePoles   =   length(level.poles.r̂sθsϕs)
+
+        aggSize = (sizePoles, 2, nCubes)
+        # 分区
+        partitation = slicedim2mpi(aggSize, np)
+
+        # 开始预分配内存
+        # 聚合项
+        aggS    =   mpiarray(Complex{FT}, aggSize; partitation = partitation)
+        # 解聚项
+        disaggG =   mpiarray(Complex{FT}, aggSize; partitation = partitation)
+        # 保存
+        level.aggS  =   aggS
+        level.disaggG = disaggG
+    end
+
+    return nothing
+
 end

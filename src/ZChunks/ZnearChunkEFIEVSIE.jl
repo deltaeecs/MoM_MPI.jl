@@ -225,8 +225,8 @@ function calZnearChunksCFIE!(cubes, geosInfo1::AbstractVector{T1}, geosInfo2::Ab
     # 本进程索引
     idcs    =   ZnearChunks.indices[1]
     # 本地数据
-    cubeslw         =   getGhostGeos(cubes)
-    ZnearChunkslc   =   getGhostGeos(ZnearChunks)
+    cubeslw         =   getGhostMPIVecs(cubes)
+    ZnearChunkslc   =   getGhostMPIVecs(ZnearChunks)
     # 进度条
     cond = true
     if cond
