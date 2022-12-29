@@ -225,16 +225,15 @@ function calZnearChunksCFIE!(cubes, geosInfo1::AbstractVector{T1}, geosInfo2::Ab
     # 本进程索引
     idcs    =   ZnearChunks.indices[1]
     # 本地数据
-    cubeslw         =   getGhostMPIVecs(cubes)
     ZnearChunkslc   =   getGhostMPIVecs(ZnearChunks)
     # 进度条
     cond = true
     if cond
-        pmeter = Progress(length(idcs); desc = "Cal Z on rank $(ZnearChunks)...", dt = 1, color = :origin)
+        pmeter = Progress(length(idcs); desc = "Cal Z on rank $(ZnearChunks)...", dt = 1, barglyphs=BarGlyphs("[=> ]"), color = :blue)
     end
     # 计算
     @threads for i in idcs
-        calZnearChunkEFIEonCube!(i, cubeslw, geosInfo1, geosInfo2, ZnearChunkslc[i], bfT)
+        calZnearChunkEFIEonCube!(i, cubes, geosInfo1, geosInfo2, ZnearChunkslc[i], bfT)
         cond && next!(pmeter)
     end
     MPI.Barrier(ZnearChunks.comm)

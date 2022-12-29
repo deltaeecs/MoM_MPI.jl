@@ -26,11 +26,11 @@ end
 """
 在本进程上分配叶层辐射或接收积分内存
 """
-function allocatePatternCubes(cubes::MPIVector, nPoles; T = Precision.CT, 
+function allocatePatternCubes(cubes::PartitionedVector, nPoles; T = Precision.CT, 
     comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm))
 
     # 本进程的盒子、邻盒子包含的基函数数量
-    ngbfslw      =   sum(idc -> length(cubes[idc].bfInterval), cubes.indices[1]; init = 0)
+    ngbfslw      =   sum(idc -> length(cubes[idc].bfInterval), cubes.indices; init = 0)
     # 分配内存
     ghostdata   =   zeros(T, nPoles, 2, ngbfslw)
 

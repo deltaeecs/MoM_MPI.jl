@@ -52,6 +52,12 @@ updateVSBFTParams!(;vbfT = vbfT)
     # 构建矩阵向量乘积算子
     Zopt  =   MLMFAIterator(ZnearChunksMPI, octree, geosInfo);
     @test true
+
+    fill!(ICoeff, 1)
+    y = ZnearChunksMPI * ICoeff
+    @show norm(y)
+
+    
 end
 
 

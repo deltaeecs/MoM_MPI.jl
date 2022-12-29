@@ -10,7 +10,7 @@ SimulationParams.SHOWIMAGE = false
 filename = "../meshfiles/sphereShellTetra50mm.nas"
 vbfT  =  :PWC
 ## 设置输入频率从而修改内部参数
-inputParameters(;frequency = 10e8, ieT = :EFIE)
+inputParameters(;frequency = 5e8, ieT = :EFIE)
 
 # ! set the number of nprocs uesed in MPI
 set_nprocs!(np = 4)

@@ -35,7 +35,7 @@ function loadOctree(fn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = 
     levels = Dict{Int, LevelInfoMPI}()
 
     for i in 1:nLevels
-        levels[i] = loadMPILevel(levelsname*"_$i.jld2", levelsname*"_$(i)_Cubes_part_$(rank+1).jld2"; comm=comm, rank=rank, np=np)
+        levels[i] = loadMPILevel(levelsname*"_$i.jld2"; comm=comm, rank=rank, np=np)
     end
 
     return OctreeInfo(nLevels, leafCubeEdgel, bigCubeLowerCoor, levels)

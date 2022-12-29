@@ -13,6 +13,20 @@ function getGeoIDsInCubeChunk(cubes, chunkIndice::Tuple)
 end
 
 """
+    getGeoIDsInCubeChunk(cubes, ckunkIndice)
+
+获取 ckunkIndice 内的所有 cube 的 geo ID ， 返回为 Tuple 形式以适应数组索引相关API
+
+"""
+function getGeoIDsInCubeChunk(cubes, chunkIndice::UnitRange)
+
+    geoIDs = reduce(vcat, cubes[i].geoIDs for i in chunkIndice)
+
+    return (unique!(sort!(geoIDs)), )
+
+end
+
+"""
     getNeighborCubeIDs(cubes, chunkIndice)
 
     获取 ckunkIndice 内的所有 cube 的 邻盒子ID， 返回为 Tuple 形式以适应数组索引相关API
@@ -62,7 +76,8 @@ function getMeshDataSaveGeosInterval(filename; meshUnit=:mm, dir = "temp/GeosInf
     return meshData, εᵣs   
 end
 
-function saveGeoInterval(meshData; dir = "")
+function saveGeoInterval(meshData; dir = "temp/GeosInfo")
+    !ispath(dir) && mkpath(dir)
     data = (tri = 1:meshData.trinum, tetra = (meshData.trinum + 1):(meshData.trinum + meshData.tetranum),
             hexa = (meshData.trinum + meshData.tetranum + 1):meshData.geonum,)
     jldsave(joinpath(dir, "geoInterval.jld2"), data = data)

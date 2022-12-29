@@ -51,12 +51,19 @@ function Base.:*(Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
     # initialZchunksMulV!(Z)
     nthds   =   nthreads()
     BLAS.set_num_threads(1)
-    @inbounds @threads  for ii in 1:Z.nChunks
-        copyto!(view(Z.rmul, Z.chunks[ii].rowIndices), Z.chunks[ii] * x)
+    sync!(x)
+    xghost = getGhostMPIVecs(x)
+    @inbounds @threads for ii in Z.chunks.indices[1]
+        Zchunks = Z.chunks[ii]
+        mul!(Zchunks.rmul, Zchunks, xghost)
+        setindex!(Z.rmuld, Zchunks.rmul, Zchunks.rowIndices)
     end
     BLAS.set_num_threads(nthds)
 
-    return copy(Z.rmul)
+    MPI.Barrier(x.comm)
+    sync!(Z.rmuld)
+
+    return deepcopy(Z.rmuld)
 end
 
 function LinearAlgebra.mul!(y::MPIVector, Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
@@ -65,13 +72,15 @@ function LinearAlgebra.mul!(y::MPIVector, Z::T, x::MPIVector) where{T<:ZnearChun
     BLAS.set_num_threads(1)
     sync!(x)
     xghost = getGhostMPIVecs(x)
-    @inbounds @threads  for ii in Z.chunks.indices[1]
-        mul!(view(Z.rmul, Z.chunks[ii].rowIndices), Z.chunks[ii], xghost)
+    @inbounds @threads for ii in Z.chunks.indices[1]
+        Zchunks = Z.chunks[ii]
+        mul!(Zchunks.rmul, Zchunks, xghost)
+        setindex!(y, Zchunks.rmul, Zchunks.rowIndices)
     end
     BLAS.set_num_threads(nthds)
 
     MPI.Barrier(x.comm)
-    copyto!(y, Z.rmul)
+    copyto!(y.data, Z.rmuld.data)
     sync!(y)
 
     return y
@@ -81,19 +90,16 @@ end
 """
 根据八叉树盒子信息初始化 cube 对应的近场矩阵元块儿
 """
-function initialZnearChunks(cube, cubes::MPIVector; CT = Complex{Precision.FT})
+function initialZnearChunks(cube, cubes::PartitionedVector; CT = Complex{Precision.FT})
 
     # 确定近场元的总数、计算列起始位置指针
     rowIndices  =   cube.bfInterval
-
-    # 本地数据
-    cubeslw     =   getGhostMPIVecs(cubes)
 
     # 对其邻盒循环
     colIndices  =   Int[]
     for jNearCube in cube.neighbors
         # 邻盒子信息
-        nearCube    =   cubeslw[jNearCube]
+        nearCube    =   cubes[jNearCube]
         # 对邻盒子中测试基函数数量累加
         append!(colIndices, nearCube.bfInterval)
     end # jNearCube
@@ -105,15 +111,16 @@ end
 """
 根据八叉树盒子信息初始化 cube 对应的近场矩阵元块儿，不分配 ghost 数据因为会带来大约双倍内存需求
 """
-function initialZnearChunksMPI(level; nbf, CT = Complex{Precision.FT}, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm))
+function initialZnearChunksMPI(level; nbf, CT = Complex{Precision.FT}, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm))
 
     # 本进程的 ghostchunks (包含了在计算预条件时用到的远亲)
     cubes       =   level.cubes
 
     # chunks 的 MPI 分结构与 cubes 类似, 因此可利用 cubes 的分布信息来构建
-    indices     =   cubes.indices
-    datasize    =   cubes.size
-    rank2indices=   cubes.rank2indices
+    indices     =   (cubes.indices, )
+    datasize    =   (cubes.size, )
+    allindices      =   MPI.Allgather((cubes.indices, ), comm)
+    rank2indices    =   Dict(zip(0:(np-1), allindices))
 
     # ghostdata 仅需要邻盒子部分
     ghostindices = indices
@@ -146,16 +153,13 @@ end
 
 生成按层内盒子的划分分配的 MPI 向量, 该向量的 ghostdata 包括邻盒子部分，用于矩阵向量乘积计算。
 """
-function MPIvecOnLevel(cubes::MPIVector{C, I}; T = Precision.CT, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where {C<:CubeInfo, I}
-
-    # 本进程MPI盒子
-    cubeslw = getGhostMPIVecs(cubes)
+function MPIvecOnLevel(cubes::PartitionedVector{C}; T = Precision.CT, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where {C<:CubeInfo}
 
     # 所有涉及的邻盒子 id
     nearCubesIndices = getNeighborCubeIDs(cubes, cubes.indices)
 
     # 本进程的盒子、邻盒子包含的基函数数量
-    ngbfslw      =   sum(idc -> length(cubeslw[idc].bfInterval), nearCubesIndices[1]; init = 0)
+    ngbfslw      =   sum(idc -> length(cubes[idc].bfInterval), nearCubesIndices[1]; init = 0)
     # 分配内存
     ghostdata   =   zeros(T, ngbfslw)
 
@@ -166,7 +170,7 @@ function MPIvecOnLevel(cubes::MPIVector{C, I}; T = Precision.CT, comm = MPI.COMM
     datasize        =   last.(last(allindices))
     
     # vector + ghost data 的区间
-    ghostindices    =   map(nearCubesIndice -> reduce(vcat, [cubeslw[idc].bfInterval for idc in nearCubesIndice]), nearCubesIndices)
+    ghostindices    =   map(nearCubesIndice -> reduce(vcat, [cubes[idc].bfInterval for idc in nearCubesIndice]), nearCubesIndices)
     dataInGhostData =   Tuple(map((i, gi) -> begin  st = searchsortedfirst(gi, i[1]); 
                                                     ed = st + length(i) - 1;
                                                     st:ed; end , indices, ghostindices))
