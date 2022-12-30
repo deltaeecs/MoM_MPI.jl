@@ -56,9 +56,7 @@ end
     将几何信息保存在
 TBW
 """
-function saveGeosInfoChunks(geos::AbstractVector, cubes, name::AbstractString, nchunk::Int; dir = "")
-    # 对盒子按 盒子数 和块数分块
-	cubes_ChunksIndices =   sizeChunks2idxs(length(cubes), nchunk)
+function saveGeosInfoChunks(geos::AbstractVector, cubes, name::AbstractString, nchunk::Int; dir = "", cubes_ChunksIndices =   sizeChunks2idxs(length(cubes), nchunk))
     # 拿到各块的包含邻盒子的id
     cubesNeighbors_ChunksIndices    =   ThreadsX.mapi(chunkIndice -> getNeighborCubeIDs(cubes, chunkIndice), cubes_ChunksIndices)
     # 拿到包含邻盒子内的该块的所有几何信息 id

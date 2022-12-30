@@ -55,7 +55,23 @@ updateVSBFTParams!(;vbfT = vbfT)
 
     fill!(ICoeff, 1)
     y = ZnearChunksMPI * ICoeff
-    @show norm(y)
+    @info "Znear*I" norm(y)
+    mul!(y, ZnearChunksMPI, ICoeff)
+    @info "Znear*I" norm(y)
+    @test true
+
+    z = Zopt * ICoeff
+    @info "Zopt*I" norm(z)
+    @test true
+    mul!(z, Zopt, ICoeff)
+    @info "Zopt*I" norm(z)
+    @test true
+
+    zc = deepcopy(z)
+    zc.data .-= y.data
+    MPI.Barrier(comm)
+    @info "Zopt*I - Znear*I" norm(zc)
+    @test true
 
     
 end

@@ -1,6 +1,10 @@
 ## 本文件的函数用于构建迭代算子
 include("AggregateOnLevel.jl")
 
+# MPI 迭代计算相关函数
+include("IterateOnOctree.jl")
+
+
 """
 实现矩阵向量乘积，并封装为线性算子
 """

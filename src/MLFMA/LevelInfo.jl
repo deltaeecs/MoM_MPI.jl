@@ -23,16 +23,17 @@ mutable struct LevelInfoMPI{IT<:Integer, FT<:Real} <: AbstractLevel
     poles       ::PolesInfo{FT}
     interpWθϕ   ::InterpInfo{IT, FT}
     aggS        ::MPIArray{Complex{FT}, IDCSAT, 3} where IDCSAT
-    aggStransfer::ArrayTransfer{Complex{FT}, 3, IDCSATT} where IDCSATT
+    aggStransfer::PatternTransfer{Complex{FT}, IDCSATT} where IDCSATT
     disaggG     ::MPIArray{Complex{FT}, IDCSDT, 3} where IDCSDT
-    disaggGtransfer     ::ArrayTransfer{Complex{FT}, 3, IDCSDTT} where IDCSDTT
+    disaggGtransfer     ::PatternTransfer{Complex{FT}, IDCSDTT} where IDCSDTT
     phaseShift2Kids     ::Matrix{Complex{FT}}
     phaseShiftFromKids  ::Matrix{Complex{FT}}
     αTrans      ::Matrix{Complex{FT}}
+    αTransTransfer ::PatternTransfer{Complex{FT}, IDCSTTT} where IDCSTTT
     αTransIndex ::OffsetArray{IT, 3, Array{IT, 3}}
     LevelInfoMPI{IT, FT}() where {IT<:Integer, FT<:Real} = new{IT, FT}()
     LevelInfoMPI{IT, FT}(   ID, L, nCubes, cubes, cubeEdgel, poles, interpWθϕ, aggS, aggStransfer, disaggG,
-                        disaggGtransfer, phaseShift2Kids, phaseShiftFromKids, αTrans,  αTransIndex) where {IT<:Integer, FT<:Real} = 
+                        disaggGtransfer, phaseShift2Kids, phaseShiftFromKids, αTrans, αTransTransfer,  αTransIndex) where {IT<:Integer, FT<:Real} = 
                 new{IT, FT}(ID, L, nCubes, cubes, cubeEdgel, poles, interpWθϕ, aggS, aggStransfer, disaggG,
                         disaggGtransfer, phaseShift2Kids, phaseShiftFromKids, αTrans,  αTransIndex)
 end
@@ -71,29 +72,35 @@ function getNeiFarNeighborCubeIDs(cubes, chunkIndice::Tuple)
 
 end
 
-function saveCubes(cubes, nchunk = ParallelParams.nprocs; name, dir="")
+function saveCubes(cubes, nchunk = ParallelParams.nprocs; name, dir="", kcubeIndices = nothing)
 	!ispath(dir) && mkpath(dir)
     # 对盒子按 盒子数 和块数分块
-	cubes_ChunksIndices =   sizeChunks2idxs(length(cubes), nchunk)
+	indices =   sizeChunks2idxs(length(cubes), nchunk)
     # 拿到各块的包含邻盒子的id
-    cubesFarNeighbors_ChunksIndices    =   ThreadsX.mapi(chunkIndice -> getNeiFarNeighborCubeIDs(cubes, chunkIndice), cubes_ChunksIndices)
-    # 分块后的索引区间
-	indices = sizeChunks2idxs(length(cubes), nchunk)
+    cubesFarNeighbors_ChunksIndices    =   ThreadsX.mapi(chunkIndice -> getNeiFarNeighborCubeIDs(cubes, chunkIndice), indices)
 
     @floop for (i, indice) in enumerate(indices)
         data = OffsetVector(cubes[indice...], indice...)
         idcs = indice[1]
         ghostindices::Vector{Int} = setdiff(cubesFarNeighbors_ChunksIndices[i][1], indice[1])
+        # 子盒子与本层盒子区间错位时也会产生 ghost 数据需要保存在本地
+        !isnothing(kcubeIndices) && begin
+            tCubesInterval  =   last(searchsorted(cubes, first(kcubeIndices[i]); by = func4Cube1stkInterval)):first(searchsorted(cubes, last(kcubeIndices[i]); by = func4CubelastkInterval))
+            otherGhostIdcs = setdiff(tCubesInterval, indice)
+            # 将此部分 idcs 补充进来
+            unique!(sort!(append!(ghostindices, otherGhostIdcs)))    
+        end
+
         ghostdata = sparsevec(ghostindices, cubes[ghostindices])
         cubes_i = PartitionedVector{eltype(cubes)}(length(cubes), data, idcs, ghostdata, ghostindices)
 		jldsave(joinpath(dir, "$(name)_part_$i.jld2"), data = cubes_i)
 	end
 
-    return nothing
+    return indices
     
 end
 
-function saveLevel(level, np = ParallelParams.nprocs; dir="")
+function saveLevel(level, np = ParallelParams.nprocs; dir="", kcubeIndices = nothing)
 
     !ispath(dir) && mkpath(dir)
 
@@ -104,18 +111,22 @@ function saveLevel(level, np = ParallelParams.nprocs; dir="")
     # 多极子数
     sizePoles   =   length(level.poles.r̂sθsϕs)
 
-    aggSize = (sizePoles, 2, length(cubes))
-    # 分区
-    partitation = slicedim2mpi(aggSize, np)
+    partitation = if length(cubes) > 3np
+        (1, 1, np)
+    else
+        aggSize = (sizePoles, 2, length(cubes))
+        # 分区
+        slicedim2mpi(aggSize, np)
+    end
 
-    saveCubes(cubes, partitation[3]; name = "Level_$(level.ID)_Cubes", dir=dir)
+    indices = saveCubes(cubes, partitation[3]; name = "Level_$(level.ID)_Cubes", dir=dir, kcubeIndices = kcubeIndices)
 
     # 保存
     jldsave(joinpath(dir, "Level_$(level.ID).jld2"), data = level)
 
     level.cubes = cubes
 
-    nothing
+    return indices
 
 end
 
@@ -129,39 +140,6 @@ function loadCubes(cubefn)
     # Cubes
     cubes       = load(cubefn, "data")
 
-    # dataloaded  = load(cubefn)
-    # datasize    = dataloaded["size"]
-    # ghostindices= dataloaded["indice"]
-
-    # # indices
-    # allindices   = sizeChunks2idxs(datasize, np)
-    # rank2indices = Dict(zip(0:(np-1), allindices))
-    # indices = rank2indices[rank]
-
-    # # ghost rank to ghost indices
-    # ghostranks      = indice2ranks(ghostindices, rank2indices)
-    # grank2gindices  = grank2ghostindices(ghostranks, ghostindices, rank2indices; localrank = rank)
-
-    # # remote rank to remote indices
-    # rank2ghostindices = Dict{Int, typeof(ghostindices)}()
-    # for rk in ghostranks
-    #     rk == rank && continue
-    #     rank2ghostindices[rk] =  load(replace(cubefn, "part_$(rank+1)" => "part_$(rk+1)"), "indice")
-    # end
-    # remoteranks     = indice2ranks(indices, rank2ghostindices)
-    # rrank2indices   = remoterank2indices(remoteranks, indices, rank2ghostindices; localrank = rank)
-
-    # # data
-    # dataInGhostData = Tuple(map((i, gi) -> begin    st = searchsortedfirst(gi, i[1]); 
-    #                                                 ed = st + length(i) - 1;
-    #                                                 st:ed; end , indices, ghostindices))
-    # data = view(ghostdata, dataInGhostData...)
-
-
-    # cubes = MPIArray{eltype(ghostdata), typeof(indices), 1}(data, indices, OffsetArray(data, indices), comm, rank, datasize, rank2indices, ghostdata, ghostindices, grank2gindices, rrank2indices)
-    # # sync!(cubes)
-
-    # MPI.Barrier(comm)
     return cubes
 
 end
@@ -180,10 +158,14 @@ function loadMPILevel!(level, fn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(co
 
     # 多极子数
     sizePoles   =   length(level.poles.r̂sθsϕs)
-
-    aggSize     =   (sizePoles, 2, level.nCubes)
     # 分区
-    partitation =   slicedim2mpi(aggSize, np)
+    partitation = if level.nCubes > 3np
+        (1, 1, np)
+    else
+        aggSize = (sizePoles, 2, level.nCubes)
+        # 分区
+        slicedim2mpi(aggSize, np)
+    end
 
     cubes_part  =   rank ÷ partitation[1] + 1
 
@@ -221,8 +203,13 @@ function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT
 
         aggSize = (sizePoles, 2, nCubes)
         # 分区
-        partitation = slicedim2mpi(aggSize, np)
-
+        partitation = if level.nCubes > 3np
+            (1, 1, np)
+        else
+            aggSize = (sizePoles, 2, level.nCubes)
+            # 分区
+            slicedim2mpi(aggSize, np)
+        end
         # 开始预分配内存
         # 聚合项
         aggS    =   mpiarray(Complex{FT}, aggSize; partitation = partitation)
@@ -250,15 +237,32 @@ function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT
 end
 
 function update_local_transInfo_onLevel(level)
-
+    # 本 level 盒子
+    cubes = level.cubes
     # 本层的316个转移因子和其索引 OffsetArray 矩阵
     αTrans      =   level.αTrans
 
     # 局部 pole 的索引和数据
-    poleIndices = level.disaggG.indices[1]
+    poleIndices, iθϕ, cubeIndices = level.disaggG.indices
 
     # 更新数据
     level.αTrans = αTrans[poleIndices, :]
+
+    
+    ## 转移时要用到远亲组的数据，因此需要设置对应的数据转移算子
+    # 首先，找出所有非本 rank (Other rank, or) 的远亲
+    farNeis_or   =   Int[]
+    for iCube in cubeIndices
+        cube    =   cubes[iCube]
+        farNeighborIDs = cube.farneighbors
+        # 对远亲循环
+        for iFarNei in farNeighborIDs
+            !(iFarNei in cubeIndices) && push!(farNeis_or, iFarNei)
+        end
+    end
+    unique!(sort!(farNeis_or))
+    # 创建转移子
+    level.αTransTransfer     =   PatternTransfer((poleIndices, iθϕ, farNeis_or), level.aggS)
 
     return nothing
     
@@ -309,10 +313,12 @@ function update_local_interpInfo_onLevel(tLevel, kLevel)
     # 从本层到子层的相移
     phaseShift2Kids     =   tLevel.phaseShift2Kids
 
+    # 子层局部的索引和数据
+    kpoleIndices, kiθϕIndices, _ = kDisAggG.indices
+
     ### 先计算聚合相关项
     # 局部的索引和数据
-    tpoleIndices = first(tAggS.indices)
-    tcubeIndices = last(tAggS.indices)
+    tpoleIndices, tiθϕIndices, tcubeIndices = tAggS.indices
     kcubeIndices = last(kDisAggG.indices)
 
     ## 局部插值矩阵
@@ -334,11 +340,10 @@ function update_local_interpInfo_onLevel(tLevel, kLevel)
     cubesKidsInterval   =   AllGatherintervals(cubes)
     kCubesInterval  =   first(cubesKidsInterval[tcubeIndices[1]]):last(cubesKidsInterval[tcubeIndices[end]])
     # 本进程用到的所有子盒子的辐射积分
-    kAggStransfer   =   ArrayTransfer((tθϕpoleIndices, 1:2, kCubesInterval), kLevel.aggS)
+    tθϕpoleIndicesUsed  =  (length(tθϕpoleIndices) == length(kpoleIndices)) ? kpoleIndices : tθϕpoleIndices
+    kAggStransfer   =   PatternTransfer((tθϕpoleIndicesUsed, tiθϕIndices, kCubesInterval), kLevel.aggS)
 
     ### 再计算解聚相关项
-    # 局部的索引和数据
-    kpoleIndices = kDisAggG.indices[1]
     ## 局部插值矩阵
     # ϕ 方向
     ϕCSCTlwtemp     =   ϕCSCT[kpoleIndices, :]
@@ -358,8 +363,8 @@ function update_local_interpInfo_onLevel(tLevel, kLevel)
     # tCubesInterval  =   last(searchsorted(cubes, first(kcubeIndices); by = func4Cube1stkInterval)):first(searchsorted(cubes, last(kcubeIndices); by = func4CubelastkInterval))
     tCubesInterval  =   last(searchsorted(cubesKidsInterval, first(kcubeIndices); by = func4Cube1stkInterval)):first(searchsorted(cubesKidsInterval, last(kcubeIndices); by = func4CubelastkInterval))
     # 本进程用到的所有盒子的辐射积分
-    tDisaggStransfer    =   ArrayTransfer((kθϕpoleIndices, 1:2, tCubesInterval), tLevel.disaggG)
-    
+    kθϕpoleIndicesUsed  =  (length(kθϕpoleIndices) == (tpoleIndices)) ? tpoleIndices : kθϕpoleIndices
+    tDisaggStransfer    =   PatternTransfer((kθϕpoleIndicesUsed, kiθϕIndices, tCubesInterval), tLevel.disaggG)
 
     ### 更新
     interpWθϕ.θCSC    =   θCSClw
@@ -369,7 +374,7 @@ function update_local_interpInfo_onLevel(tLevel, kLevel)
     tLevel.phaseShiftFromKids   =   phaseShiftFromKidslw
     tLevel.phaseShift2Kids      =   phaseShift2Kidslw
     kLevel.aggStransfer         =   kAggStransfer
-    kLevel.disaggGtransfer      =   tDisaggStransfer
+    tLevel.disaggGtransfer      =   tDisaggStransfer
 
     return nothing
 

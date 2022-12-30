@@ -26,7 +26,7 @@ function MoM_Kernels.aggSBFOnLevelEFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, l
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
-    cubeIndices::UnitRange{Int} =   level.cubes.indices[1]
+    cubeIndices::UnitRange{Int} =   level.cubes.indices
     # 本进程分配到的 pattern 数据
     aggSBFlw    =   OffsetArray(aggSBF.ghostdata, aggSBF.indices)
     disaggSBFlw =   OffsetArray(disaggSBF.ghostdata, disaggSBF.indices)
@@ -42,7 +42,7 @@ function MoM_Kernels.aggSBFOnLevelEFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, l
     ntri = length(trianglesInfo)
 
     # 进度条
-    pmeter  =   Progress(length(cubeIndices), "Agg on rank $(aggSBF.myrank) RWG (Tri + EFIE)...")
+    pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) RWG (Tri + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
     @threads for iCube in cubeIndices
         # 盒子
         cube    =   cubes[iCube]
@@ -125,7 +125,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
-    cubeIndices::UnitRange{Int} =   level.cubes.indices[1]
+    cubeIndices::UnitRange{Int} =   level.cubes.indices
     # 本进程分配到的 pattern 数据
     aggSBFlw    =   OffsetArray(aggSBF.ghostdata, aggSBF.indices)
     disaggSBFlw =   OffsetArray(disaggSBF.ghostdata, disaggSBF.indices)
@@ -144,7 +144,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     geoInterval =   getGeosInterval(tetrasInfo)
     
     # 进度条
-    pmeter  =   Progress(length(cubeIndices), "Agg on rank $(aggSBF.myrank) SWG (Tetra + EFIE)...")
+    pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) SWG (Tetra + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
     @threads for iCube in cubeIndices
 
         # 盒子
@@ -237,9 +237,9 @@ end
 function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level, tetrasInfo::AbstractVector{TetrahedraInfo{IT, FT, CT}}, 
     ::Type{BFT}) where {IT<:Integer, FT<:Real, CT<:Complex{FT}, BFT<:PWC}
     # 本层盒子信息
-    cubes   =   getGhostMPIVecs(level.cubes)
+    cubes   =   level.cubes
     # 本进程分配到的盒子id     
-    cubeIndices::UnitRange{Int} =   level.cubes.indices[1]
+    cubeIndices::UnitRange{Int} =   level.cubes.indices
     # 本进程分配到的 pattern 数据
     aggSBFlw    =   OffsetArray(aggSBF.ghostdata, aggSBF.indices)
     disaggSBFlw =   OffsetArray(disaggSBF.ghostdata, disaggSBF.indices)
@@ -258,7 +258,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     discreteJ::Bool = SimulationParams.discreteVar === "J"
     
     # 进度条
-    pmeter  =   Progress(length(cubeIndices), "Agg on rank $(aggSBF.myrank) PWC (Tetra + EFIE)...")
+    pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) PWC (Tetra + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
     @threads for iCube in cubeIndices
         # 盒子
         cube    =   cubes[iCube]
@@ -338,7 +338,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
-    cubeIndices::UnitRange{Int} =   level.cubes.indices[1]
+    cubeIndices::UnitRange{Int} =   level.cubes.indices
     # 本进程分配到的 pattern 数据
     aggSBFlw    =   OffsetArray(aggSBF.ghostdata, aggSBF.indices)
     disaggSBFlw =   OffsetArray(disaggSBF.ghostdata, disaggSBF.indices)
@@ -355,7 +355,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     # 常数
     JK_0 = Params.JK_0
     # 进度条
-    pmeter  =   Progress(length(cubeIndices), "Agg on rank $(aggSBF.myrank) PWC (Hexa + EFIE)...")
+    pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) PWC (Hexa + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
     @threads for iCube in cubeIndices
         # 盒子
         cube    =   cubes[iCube]
@@ -435,7 +435,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
-    cubeIndices::UnitRange{Int} =   level.cubes.indices[1]
+    cubeIndices::UnitRange{Int} =   level.cubes.indices
     # 本进程分配到的 pattern 数据
     aggSBFlw    =   OffsetArray(aggSBF.ghostdata, aggSBF.indices)
     disaggSBFlw =   OffsetArray(disaggSBF.ghostdata, disaggSBF.indices)
@@ -454,7 +454,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     geoInterval =   getGeosInterval(hexasInfo)
     
     # 进度条
-    pmeter  =   Progress(length(cubeIndices), "Agg on rank $(aggSBF.myrank) RBF (Hexa + EFIE)...")
+    pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) RBF (Hexa + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
     @threads for iCube in cubeIndices 
         # 盒子
         cube    =   cubes[iCube]

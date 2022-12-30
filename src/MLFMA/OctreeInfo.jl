@@ -13,9 +13,12 @@ function saveOctree(octree; dir="")
         data[k] = getfield(octree, k)
     end
 
+    nLevels = octree.nLevels
     levels = octree.levels
-    for (_, level) in levels
-        saveLevel(level; dir=dir)
+    kcubeIndices = nothing
+    for iLevel in nLevels:-1:1
+        level = levels[iLevel]
+        kcubeIndices = saveLevel(level; dir=dir, kcubeIndices = kcubeIndices)
         data[:levelsname] = joinpath(dir, "Level")
     end
 

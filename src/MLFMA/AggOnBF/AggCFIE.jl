@@ -21,7 +21,7 @@ function MoM_Kernels.aggSBFOnLevelCFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, l
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
-    cubeIndices::UnitRange{Int} =   level.cubes.indices[1]
+    cubeIndices::UnitRange{Int} =   level.cubes.indices
     # 本进程分配到的 pattern 数据
     aggSBFlw    =   OffsetArray(aggSBF.ghostdata, aggSBF.indices)
     disaggSBFlw =   OffsetArray(disaggSBF.ghostdata, disaggSBF.indices)
@@ -40,7 +40,7 @@ function MoM_Kernels.aggSBFOnLevelCFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, l
     ntri = length(trianglesInfo)
 
     # 进度条
-    pmeter  =   Progress(length(cubeIndices), "Agg on rank $(aggSBF.myrank) RWG (CFIE)...")
+    pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) RWG (CFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
     @threads for iCube in cubeIndices 
 
         # 盒子
