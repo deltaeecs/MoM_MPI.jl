@@ -6,6 +6,7 @@ Pkg.activate("..")
 Pkg.add(path="../../MoM_Basics")
 Pkg.add(path="../../MoM_Kernels")
 Pkg.add(path="../../MPIArray4MoMs")
+Pkg.add(path="../../IterativeSolvers/")
 
 using MPIPreferences
 
