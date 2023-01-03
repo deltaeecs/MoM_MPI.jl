@@ -66,22 +66,83 @@ function Base.:*(Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
     return deepcopy(Z.rmuld)
 end
 
-function LinearAlgebra.mul!(y::MPIVector, Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
+"""
+    getGhostICeoffVecs(y::MPIVector{T, I}) where {T, I}
+    
+	这里必须注明类型以稳定计算，仅限本包使用。
+TBW
+"""
+function getGhostICeoffVecs(y::MPIVector{T, I}) where {T, I}
+    sparsevec(y.ghostindices[1], y.ghostdata)::SparseVector{T, Int}
+end
+
+"""
+    getGhostICeoffVecs(y::MPIVector{T, I}) where {T, I}
+    
+	这里必须注明类型以稳定计算，仅限本包使用。
+TBW
+"""
+function getGhostICeoffVecs(y::SubMPIVector{T, I, SI, L}) where {T, I, SI, L}
+    yp = y.parent
+	sparsevec(yp.ghostindices[1], yp.ghostdata[:, y.indices[2]])::SparseVector{T, Int}
+end
+
+"""
+实现左乘其它向量，仅限本包使用。
+"""
+function Base.:*(Z::T, x::SubOrMPIVector) where{T<:ZnearChunksStructMPI}
     # initialZchunksMulV!(Z)
     nthds   =   nthreads()
     BLAS.set_num_threads(1)
-    sync!(x)
-    xghost = getGhostMPIVecs(x)
+    sync!(x.parent)
+    xghost = getGhostICeoffVecs(x)
     @inbounds @threads for ii in Z.chunks.indices[1]
         Zchunks = Z.chunks[ii]
         mul!(Zchunks.rmul, Zchunks, xghost)
-        setindex!(y, Zchunks.rmul, Zchunks.rowIndices)
+        setindex!(Z.rmuld, Zchunks.rmul, Zchunks.rowIndices)
     end
     BLAS.set_num_threads(nthds)
 
     MPI.Barrier(x.comm)
-    copyto!(y.data, Z.rmuld.data)
-    sync!(y)
+    sync!(Z.rmuld)
+
+    return deepcopy(Z.rmuld)
+end
+
+function LinearAlgebra.mul!(y::SubOrMPIVector, Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
+    # initialZchunksMulV!(Z)
+    nthds   =   nthreads()
+    BLAS.set_num_threads(1)
+    sync!(x)
+    xghost = getGhostICeoffVecs(x)
+    @inbounds @threads for ii in Z.chunks.indices[1]
+        Zchunks = Z.chunks[ii]
+        mul!(Zchunks.rmul, Zchunks, xghost)
+        setindex!(Z.rmuld, Zchunks.rmul, Zchunks.rowIndices)
+    end
+    BLAS.set_num_threads(nthds)
+
+    MPI.Barrier(x.comm)
+    copyto!(getdata(y), Z.rmuld.data)
+    
+    return y
+end
+
+function LinearAlgebra.mul!(y::SubOrMPIVector, Z::T, x::SubMPIVector) where{T<:ZnearChunksStructMPI}
+    # initialZchunksMulV!(Z)
+    nthds   =   nthreads()
+    BLAS.set_num_threads(1)
+    syncUnknownVectorView!(x)
+    xghost = getGhostICeoffVecs(x)
+    @inbounds @threads for ii in Z.chunks.indices[1]
+        Zchunks = Z.chunks[ii]
+        mul!(Zchunks.rmul, Zchunks, xghost)
+        setindex!(Z.rmuld, Zchunks.rmul, Zchunks.rowIndices)
+    end
+    BLAS.set_num_threads(nthds)
+
+    MPI.Barrier(x.parent.comm)
+    copyto!(getdata(y), Z.rmuld.data)
 
     return y
 end
