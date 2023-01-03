@@ -5,7 +5,7 @@ using MoM_Kernels:  aggOnBF!, agg2HighLevel!, agg2Level2!,
 """
 本进程在叶层从基函数向盒子聚合
 """
-function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVec::MPIVector{T, I}) where {LT<:LevelInfoMPI, T<:Number, I}
+function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVeclw::T) where {LT<:LevelInfoMPI, T<:AbstractVector}
 
     # 叶层盒子
     cubes   =   level.cubes
@@ -20,9 +20,6 @@ function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVec::MPIVector{T, I}) where {L
     poleIndices, iθϕIndices, cubeIndices = aggS.indices
     # 本地数据
     aggSlc  =   aggS.dataOffset
-
-    ## 本 rank 的IVec
-    IVeclw  =   IVec.dataOffset
 
     @threads for iCube in cubeIndices
         # 盒子信息
@@ -41,6 +38,24 @@ function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVec::MPIVector{T, I}) where {L
         end #n
     end #iCube
     
+    return nothing
+end
+
+function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVec::MPIVector{T, I}) where {LT<:LevelInfoMPI, T<:Number, I}
+    ## 本 rank 的IVec
+    IVeclw  =   IVec.dataOffset
+
+    aggOnBF!(level, aggSBF, IVeclw)
+    
+    return nothing
+end
+
+function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVec::SubMPIVector) where {LT<:LevelInfoMPI}
+    ## 本 rank 的IVec
+    IVeclw  =   view(IVec.parent.dataOffset, :, IVec.indices[2])
+
+    aggOnBF!(level, aggSBF, IVeclw)
+
     return nothing
 end
 
@@ -350,10 +365,10 @@ end
 """
 计算远区矩阵向量乘积
 """
-function MoM_Kernels.calZfarI!(Zopt::MLMFAIterator{ZT, MT}, IVec::MPIVector{T, I}; setzero = true) where {ZT, MT<:MPIVector, T<:Number, I}
+function MoM_Kernels.calZfarI!(Zopt::MLMFAIterator{ZT, MT}, IVec::SubOrMPIVector; setzero = true) where {ZT, MT<:MPIVector}
     
     # 计算前置零
-    setzero && fill!(Zopt.ZI, zero(T))
+    setzero && fill!(Zopt.ZI, zero(ZT))
 
     # 基函数聚合到叶层
     aggOnBF!(Zopt.leafLevel, Zopt.aggSBF, IVec)
