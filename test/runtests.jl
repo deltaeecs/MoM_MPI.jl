@@ -3,6 +3,7 @@ using Test
 
 include("mom_input.jl")
 include("GenerateOctreeAndSave.jl")
+include("PostProcessing.jl")
 
 @testset "MoM_MPI.jl" begin
     # Write your tests here.
@@ -22,6 +23,11 @@ include("GenerateOctreeAndSave.jl")
         # ! 主节点工作到此为止，其他工作交给 MPI 进程
         # 运行$(ParallelParams.nprocs)
         mpiexec(cmd -> run(`$cmd -n $(ParallelParams.nprocs) $(Base.julia_cmd()) -t 1 --project=. runtests_MPI.jl`))
+
+        # 后处理
+        ICoeff = loadCurrent("temp/results/ICurrent.jld2")
+        test_postprocessing(ICoeff, geosInfo)
+
     end
 
     rm("results"; force = true, recursive = true)

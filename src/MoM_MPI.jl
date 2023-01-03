@@ -5,7 +5,8 @@ using MPI, MPIArray4MoMs
 using OffsetArrays, SparseArrays
 using LinearAlgebra
 using .Threads, ThreadsX, FLoops, FoldsThreads
-using UnPack, JLD2, ProgressMeter
+using UnPack, JLD2, ProgressMeter, Printf
+using IterativeSolvers
 
 export  ParallelParams, set_nprocs!,
         getMeshDataSaveGeosInterval, set_geosInterval!,
@@ -14,7 +15,8 @@ export  ParallelParams, set_nprocs!,
         getGeoIDsInCubeChunk, getNeighborCubeIDs, saveGeosInfoChunks, getGeosInfo,
         LevelInfoMPI, getFarNeighborCubeIDs, saveCubes, saveLevel, 
         loadCubes, loadMPILevel!, loadMPILevel,
-        saveOctree, loadOctree
+        saveOctree, loadOctree,
+        getExcitationVector!
 
 # 参数设置相关
 include("ParallelParams.jl")
@@ -25,12 +27,16 @@ include("Common_Utlis.jl")
 # 涉及几何信息 IO 等
 include("GeosInfo.jl")
 
-# 涉及 MPI 数据的八叉树、层的 IO 等
+# 涉及 MPI 数据的八叉树、层的 IO, MLFMA计算 等
 include("MLFMA.jl")
 
 # 涉及阻抗矩阵
 include("Znear.jl")
 
-# 涉及MLFMA
+# 激励向量
+include("ExcitedVectors.jl")
+
+# 涉及 求解器
+include("Solver.jl")
 
 end

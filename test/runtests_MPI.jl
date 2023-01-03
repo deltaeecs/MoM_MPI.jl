@@ -23,10 +23,7 @@ updateVSBFTParams!(;vbfT = vbfT)
     ICoeff = MPIvecOnLevel(leafLevel);
     nbf = length(ICoeff)
     fill!(ICoeff, 1)
-    @test begin
-        nmI = norm(ICoeff)
-        comm_rank == 0 ? (nmI ≈ sqrt(nbf)) : isnothing(nmI)
-    end
+    @test norm(ICoeff) ≈ sqrt(nbf)
 
     fill!(ICoeff, comm_rank)
     sync!(ICoeff)
@@ -55,13 +52,11 @@ updateVSBFTParams!(;vbfT = vbfT)
 
     fill!(ICoeff, 1)
     y = ZnearChunksMPI * ICoeff
-    @info "Znear*I" norm(y)
     mul!(y, ZnearChunksMPI, ICoeff)
     @info "Znear*I" norm(y)
     @test true
 
     z = Zopt * ICoeff
-    @info "Zopt*I" norm(z)
     @test true
     mul!(z, Zopt, ICoeff)
     @info "Zopt*I" norm(z)
@@ -71,6 +66,17 @@ updateVSBFTParams!(;vbfT = vbfT)
     zc.data .-= y.data
     MPI.Barrier(comm)
     @info "Zopt*I - Znear*I" norm(zc)
+    @test true
+
+    source  =   PlaneWave(π, 0, 0f0, 1f0)
+    V = deepcopy(ICoeff)
+    getExcitationVector!(V, geosInfo, source);
+    sync!(V)
+    @info "V" norm(V)
+    @test true
+
+    fill!(ICoeff, 0)
+    ICoeff, ch   =   solve!(Zopt, ICoeff, V);
     @test true
 
     
