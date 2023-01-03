@@ -32,8 +32,6 @@ function getGhostMPIVecs(y::MPIVector{T, I}) where {T, I}
 	sparsevec(y.ghostindices[1], y.ghostdata)::SparseVector{T, Int}
 end
 
-Base.copyto!(y::MPIVector, x::MPIVector) = copyto!(y.data, x.data)
-
 """
 struct PartitionedVector{T} <: AbstractVector{T}
     length::Int
