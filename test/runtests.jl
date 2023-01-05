@@ -1,4 +1,3 @@
-using MoM_Basics, MoM_Kernels, MoM_MPI
 using Test
 
 include("mom_input.jl")
@@ -15,7 +14,7 @@ include("PostProcessing.jl")
         ngeo, nbf, geosInfo, bfsInfo =  getBFsFromMeshData(meshData, vbfT = vbfT)
         @test true
 
-        setGeosPermittivity!(geosInfo, 2 + 0.001im)
+        setGeosPermittivity!(geosInfo, 2(1 - 0.001im))
         @test true
 
         genetare_octree_and_save(geosInfo, bfsInfo)

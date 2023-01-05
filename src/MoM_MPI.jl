@@ -8,18 +8,12 @@ using .Threads, ThreadsX, FLoops, FoldsThreads
 using UnPack, JLD2, ProgressMeter, Printf
 using IterativeSolvers
 
-export  ParallelParams, set_nprocs!,
-        getMeshDataSaveGeosInterval, set_geosInterval!,
-        MPIvecOnLevel,
+export  MPIvecOnLevel,
         initialZnearChunksMPI, calZnearChunks!,
-        getGeoIDsInCubeChunk, getNeighborCubeIDs, saveGeosInfoChunks, getGeosInfo,
-        LevelInfoMPI, getFarNeighborCubeIDs, saveCubes, saveLevel, 
-        loadCubes, loadMPILevel!, loadMPILevel,
-        saveOctree, loadOctree,
+        getGeosInfo, 
+        LevelInfoMPI, getFarNeighborCubeIDs, 
+        loadCubes, loadMPILevel!, loadMPILevel, loadOctree,
         getExcitationVector!
-
-# 参数设置相关
-include("ParallelParams.jl")
 
 # 通用接口
 include("Common_Utlis.jl")

@@ -1,5 +1,5 @@
 # * 导入计算包
-using MPI, MPIArray4MoMs
+using MPI, MPIArray4MoMs, MoM_MPI
 using TimerOutputs, JLD2
 using LinearAlgebra
 using .Threads, MKL, MKLSparse
