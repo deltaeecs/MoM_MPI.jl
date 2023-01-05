@@ -75,17 +75,28 @@ function setPatternData_form_localDatAandTransfer!(targetData, iseq_reqs_idcs, i
             spdata =  datatransfer.reqsDatas[iCube]
             setindex!(targetData, spdata.nzval, :, :)
         end
-    else # 多极子方向不匹配 或 θ ϕ 不 方向匹配
+    else # 多极子方向不匹配 或 θ ϕ  方向不匹配
         # 创建 ArrayChunk
         targetDataChunk = ArrayChunk(targetData, datatransfer.reqsIndices[1], datatransfer.reqsIndices[2])
 
         ## 首先将 data 里的数据填充进 targetData
-        # data 在 targetData 的 多极子方向、θ ϕ 方向的索引
-        @info "setPattern" data.indices datatransfer.reqsIndices
-        dataInTargetIndices = map(intersect, data.indices, datatransfer.reqsIndices)
+        if  (iseq_reqs_idcs[3]) || (iCube in data.indices[3])  # 部分数据在 data 里面
+            dataOffset = data.dataOffset[:, :, iCube]
+            for j in axes(dataOffset, 2), i in axes(dataOffset, 1)
+                targetDataChunk[i, j] = dataOffset[i, j]
+            end
+        end
 
-        ## 其次将
-
+        ## 其次将 datatransfer 里面数据的数据导出
+        spdata =  datatransfer.reqsDatas[iCube]
+        for j in axes(spdata, 2)
+            colptr = spdata.colptr
+            is = view(spdata.rowval, colptr[j]:colptr[j+1])
+            zs = view(spdata.nzval,  colptr[j]:colptr[j+1])
+            for (i, z) in zip(is, zs)
+                targetDataChunk[i, j] = z
+            end
+        end
     end
 
     nothing
