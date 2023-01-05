@@ -22,7 +22,7 @@ export  ParallelParams, set_nprocs!,
 include("ParallelParams.jl")
 
 # 通用接口
-include("Common_Utlis.jl")
+include("Common_utlis.jl")
 
 # 涉及几何信息 IO 等
 include("GeosInfo.jl")
