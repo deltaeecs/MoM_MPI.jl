@@ -1,3 +1,5 @@
 /Manifest.toml
 /results/*
 /temp/*
+test/results*
+test/temp*
