@@ -8,27 +8,28 @@ IterativeSolvers.zerox(A::AbstractArray, b::MPIVector) = deepcopy(b)
 function get_Orthonormal_basis_vectorsz(b, restart::Int)
 
 	T = eltype(b)
-	indices 		= 	(b.indices..., 1:restart)
-	ghostindices 	= 	(b.ghostindices..., 1:restart)
-	ghostdata 		= 	zeros(T, size(b.ghostdata, 1), restart)
-	data 			=	view(ghostdata, b.data.indices..., 1:restart)
+	restartp1 = restart + 1
+	indices 		= 	(b.indices..., 1:restartp1)
+	ghostindices 	= 	(b.ghostindices..., 1:restartp1)
+	ghostdata 		= 	zeros(T, size(b.ghostdata, 1), restartp1)
+	data 			=	view(ghostdata, b.data.indices..., 1:restartp1)
 	dataOffset 		= 	OffsetArray(data, b.dataOffset.offsets..., 0)
-	Vsize 			=	(b.size..., restart)
+	Vsize 			=	(b.size..., restartp1)
 
 	rank2indices 	=	Dict{Int, Tuple{typeof(first(values(b.rank2indices))[1]), UnitRange{Int}}}()
 
 	for (k, v) in b.rank2indices
-		rank2indices[k] =	(v..., 1:restart)
+		rank2indices[k] =	(v..., 1:restartp1)
 	end
 
 	grank2ghostindices	=	Dict{Int, Tuple{typeof(first(values(b.grank2ghostindices))[1]), UnitRange{Int}}}()
 	for (k, v) in b.grank2ghostindices
-		grank2ghostindices[k] = (v..., 1:restart)
+		grank2ghostindices[k] = (v..., 1:restartp1)
 	end
 
 	rrank2localindices	=	Dict{Int, Tuple{typeof(first(values(b.rrank2localindices))[1]), UnitRange{Int}}}()
 	for (k, v) in b.rrank2localindices
-		rrank2localindices[k] = (v..., 1:restart)
+		rrank2localindices[k] = (v..., 1:restartp1)
 	end
 
 	return MPIMatrix{T, typeof(indices)}(	data, indices, dataOffset, b.comm, b.myrank, Vsize, 
