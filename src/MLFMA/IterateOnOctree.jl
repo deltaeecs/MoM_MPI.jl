@@ -60,11 +60,11 @@ function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVec::SubMPIVector) where {LT<:
 end
 
 """
-    setPatternData_form_localDatAandTransfer!(targetData, index, localdata, transfer)
+    setPatternData_form_localDataAndTransfer!(targetData, index, localdata, transfer)
 
 TBW
 """
-function setPatternData_form_localDatAandTransfer!(targetData, iseq_reqs_idcs, iCube, data, datatransfer)
+function setPatternData_form_localDataAndTransfer!(targetData, iseq_reqs_idcs, iCube, data, datatransfer)
     # 置零
     fill!(targetData, 0)
     
@@ -78,23 +78,32 @@ function setPatternData_form_localDatAandTransfer!(targetData, iseq_reqs_idcs, i
     else # 多极子方向不匹配 或 θ ϕ  方向不匹配
         # 创建 ArrayChunk
         targetDataChunk = ArrayChunk(targetData, datatransfer.reqsIndices[1], datatransfer.reqsIndices[2])
-
         ## 首先将 data 里的数据填充进 targetData
         if  (iseq_reqs_idcs[3]) || (iCube in data.indices[3])  # 部分数据在 data 里面
             dataOffset = data.dataOffset[:, :, iCube]
-            for j in axes(dataOffset, 2), i in axes(dataOffset, 1)
+            for j in intersect(axes(dataOffset, 2), datatransfer.reqsIndices[2]), i in intersect(axes(dataOffset, 1), datatransfer.reqsIndices[1])
                 targetDataChunk[i, j] = dataOffset[i, j]
             end
         end
 
         ## 其次将 datatransfer 里面数据的数据导出
-        spdata =  datatransfer.reqsDatas[iCube]
-        for j in axes(spdata, 2)
-            colptr = spdata.colptr
-            is = view(spdata.rowval, colptr[j]:colptr[j+1])
-            zs = view(spdata.nzval,  colptr[j]:colptr[j+1])
-            for (i, z) in zip(is, zs)
-                targetDataChunk[i, j] = z
+        # 该数据仅位于 spdata
+        if all(i -> sortedVecInUnitRange(datatransfer.reqsIndices[i], data.indices[i]), 1:2) && !(iCube in data.indices[3])
+            spdata =  datatransfer.reqsDatas[iCube]
+            setindex!(targetData, spdata.nzval, :, :)
+        end
+        # 该数据部分位于 spdata
+        if any(i -> !sortedVecInUnitRange(datatransfer.reqsIndices[i], data.indices[i]), 1:2)
+            
+            # 首先判断
+            spdata =  datatransfer.reqsDatas[iCube]
+            for j in axes(spdata, 2)
+                colptr = spdata.colptr
+                is = view(spdata.rowval, colptr[j]:(colptr[j+1]-1))
+                zs = view(spdata.nzval,  colptr[j]:(colptr[j+1]-1))
+                for (i, z) in zip(is, zs)
+                    targetDataChunk[i, j] = z
+                end
             end
         end
     end
@@ -141,7 +150,8 @@ function MoM_Kernels.agg2HighLevel!(tLevel::LT, kLevel::LT; comm = MPI.COMM_WORL
     aggSInterpeds   =   zeros(CT, size(θCSC, 1), size(kAggS, 2), nthds)
     
     # 本层待计算聚合项
-    tAggSlc =   tAggS.dataOffset
+    tAggSlc =   tAggS.ghostdata
+    tCubeOffset =   first(tAggS.indices[3]) - 1
     ## 置零避免累加错误
     fill!(tAggS.ghostdata, 0)
     # 对盒子循环
@@ -163,15 +173,16 @@ function MoM_Kernels.agg2HighLevel!(tLevel::LT, kLevel::LT; comm = MPI.COMM_WORL
             # 子盒子在8个子盒子中的id
             kIn8    =   cube.kidsIn8[jkCube]
             # 根据索引设置
-            setPatternData_form_localDatAandTransfer!(kAggSlc, iseq_reqs_idcs, kCubeID, kAggS, kAggSTransfer)
+            setPatternData_form_localDataAndTransfer!(kAggSlc, iseq_reqs_idcs, kCubeID, kAggS, kAggSTransfer)
             mul!(aggSInterpedϕ, ϕCSC, kAggSlc)
             mul!(aggSInterped, θCSC, aggSInterpedϕ)
 
             # 插值完毕进行子层到本层的相移，累加进父盒子聚合项
-            @views tAggSlc[:, :, iCube]   .+=   phaseShiftFromKids[:, kIn8] .* aggSInterped
-
+            iCubelc = iCube - tCubeOffset
+            @views tAggSlc[:, :, iCubelc]   .+=   phaseShiftFromKids[:, kIn8] .* aggSInterped
         end # jkCube
     end #iCube
+    MPI.Barrier(comm)
 
     BLAS.set_num_threads(nthds)
     nothing
@@ -196,7 +207,8 @@ function MoM_Kernels.transOnLevel!(level::LT) where {LT<:LevelInfoMPI}
 
     # 局部的索引和数据
     poleIndices, iθϕIndices, cubeIndices = disaggG.indices
-    disaggGlc   =   disaggG.dataOffset
+    disaggGlc   =   disaggG.ghostdata
+    cubeOffset  =   first(cubeIndices) - 1
     aggSlc      =   aggS.dataOffset
     # 置零避免累加错误
     fill!(disaggG.ghostdata, 0)
@@ -223,7 +235,7 @@ function MoM_Kernels.transOnLevel!(level::LT) where {LT<:LevelInfoMPI}
                 setindex!(aggSi, spdata.nzval, :, :)
             end
             # 转移
-            @views disaggGlc[:, :, iCube]    .+=   αTrans[poleIndices, i1d] .* aggSi
+            @views disaggGlc[:, :, iCube - cubeOffset]    .+=   αTrans[:, i1d] .* aggSi
         end # iFarNei
     end #iCube
 
@@ -237,7 +249,7 @@ end #function
 tLevel :: 本层
 kLevel :: 子层
 """
-function MoM_Kernels.disagg2KidLevel!(tLevel::LT, kLevel::LT) where {LT <: LevelInfoMPI}
+function MoM_Kernels.disagg2KidLevel!(tLevel::LT, kLevel::LT; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where {LT <: LevelInfoMPI}
 
     # 本层信息
     cubes   =   tLevel.cubes
@@ -263,20 +275,21 @@ function MoM_Kernels.disagg2KidLevel!(tLevel::LT, kLevel::LT) where {LT <: Level
 
     # 子层局部的索引和数据
     poleIndices, _, cubeIndices = kDisAggG.indices
-    kDisaggGSlcOff  =   kDisAggG.dataOffset
+    kDisaggGlw      =   kDisAggG.ghostdata
+    kCubeOffset     =   first(cubeIndices) - 1
     
     ## 本地化本进程用到的子层辐射积分
     # 先找出所有的父盒子索引
     tCubesIntervallw    =   tDisaggGtransfer.reqsIndices[3]
     # 本进程用到的所有盒子的辐射积分
-    tDisaggGlw     =   tDisaggG.ghostdata
-
+    tDisaggGlw      =   tDisaggG.ghostdata
+    # 判断需求区间与拥有数据区间是否匹配
     iseq_reqs_idcs  =   map(isequal, treqsIndices, tDisaggIndices)
 
     # 分配内存
     nthds   =   nthreads()
     BLAS.set_num_threads(1)
-    disGshifted2s   =   zeros(CT, size(tDisaggGlw, 1), size(tDisaggGlw, 2), nthds)
+    disGshifted2s   =   zeros(CT, map(length, treqsIndices[1:2])..., nthds)
     disGInterpedθ2s =   zeros(CT, size(θCSCT, 1), size(tDisaggGlw, 2), nthds)
     disGInterped2s  =   zeros(CT, size(ϕCSCT, 1), size(tDisaggGlw, 2), nthds)
     # 对盒子循环
@@ -287,12 +300,12 @@ function MoM_Kernels.disagg2KidLevel!(tLevel::LT, kLevel::LT) where {LT <: Level
         
         # 本线程数据
         tid =   threadid()
-        tCubeDisaggG     =   zeros(CT, size(tDisaggGlw, 1), size(tDisaggGlw, 2))
+        tCubeDisaggG     =   zeros(CT, map(length, treqsIndices[1:2])...)
         @views disGshifted2     =   disGshifted2s[:, :, tid]
         @views disGInterpedθ2   =   disGInterpedθ2s[:, :, tid]
         @views disGInterped2    =   disGInterped2s[:, :, tid]
         # 复制数据到本地
-        setPatternData_form_localDatAandTransfer!(tCubeDisaggG, iseq_reqs_idcs, iCube, tDisaggG, tDisaggGtransfer)
+        setPatternData_form_localDataAndTransfer!(tCubeDisaggG, iseq_reqs_idcs, iCube, tDisaggG, tDisaggGtransfer)
 
         # 进程 id
         # 对子盒子循环
@@ -303,17 +316,22 @@ function MoM_Kernels.disagg2KidLevel!(tLevel::LT, kLevel::LT) where {LT <: Level
             # 子盒子在8个子盒子中的id
             kIn8    =   cube.kidsIn8[jkCube]
 
-            # 进行本层到子层的相移，累加进父盒子聚合项
-            @views disGshifted2 .= phaseShift2Kids[:,kIn8] .* tCubeDisaggG
+            # 进行本层到子层的相移，累加进父盒子聚合项 
+            # @views disGshifted2 .= phaseShift2Kids[:,kIn8] .* tCubeDisaggG
+            for dr in axes(tCubeDisaggG, 2), ipx in axes(tCubeDisaggG, 1)
+                disGshifted2[ipx, dr]   =  phaseShift2Kids[ipx, kIn8]*tCubeDisaggG[ipx, dr]
+            end
+
             # disGInterpedθ2 .= θCSCT * disGshifted2
             # disGInterped2  .= ϕCSCT * disGInterpedθ2
             mul!(disGInterpedθ2, θCSCT, disGshifted2)
             mul!(disGInterped2, ϕCSCT, disGInterpedθ2)
 
             # @views kdisAggGAnterped     =   ϕCSCT*(θCSCT*(phaseShift2Kids[:,kIn8] .* tCubeDisaggG))
-            kDisaggGSlcOff[:,:,kCubeID] .+= disGInterped2
+            @views kDisaggGlw[:,:,kCubeID - kCubeOffset] .+= disGInterped2
         end # jkCube
     end #iCube
+    MPI.Barrier(comm)
     # 还原线程
     BLAS.set_num_threads(nthds)
 

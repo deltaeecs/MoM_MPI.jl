@@ -202,7 +202,7 @@ func4CubelastkInterval(cube::CubeInfo) = last(cube.kidsInterval)
 func4CubelastkInterval(i::T) where T <: Integer = i
 func4CubelastkInterval(interval::T) where T <: UnitRange = last(interval)
 
-function AllGatherintervals(cubes::PartitionedVector; comm = MPI.COMM_WORLD)
+function AllGatherIntervals(cubes::PartitionedVector; comm = MPI.COMM_WORLD)
     ls = MPI.Allgather(length(cubes.data), comm)
     data = Vector{UnitRange{Int}}(undef, sum(ls))
     MPI.Allgatherv!([cube.kidsInterval for cube in cubes.data.parent], VBuffer(data, ls), comm)
@@ -261,7 +261,7 @@ function update_local_interpInfo_onLevel(tLevel, kLevel)
 
     ## kAggS 的数据通信算子
     # 先找出所有的子盒子
-    cubesKidsInterval   =   AllGatherintervals(cubes)
+    cubesKidsInterval   =   AllGatherIntervals(cubes)
     kCubesInterval  =   first(cubesKidsInterval[tcubeIndices[1]]):last(cubesKidsInterval[tcubeIndices[end]])
     # 本进程用到的所有子盒子的辐射积分
     tθϕpoleIndicesUsed  =  (length(tθϕpoleIndices) == length(kpoleIndices)) ? kpoleIndices : tθϕpoleIndices
