@@ -17,11 +17,12 @@ mutable struct ZnearChunksStructMPI{T<:Number} <:ZNEARCHUNK{T}
     m   ::Int
     n   ::Int
     nChunks ::Int
-    chunks  ::MPIVector{MatrixChunk{T}, I} where I
+    chunks  ::MPIVector{MatrixChunk{T}, Tuple{UnitRange{Int64}}, 
+                            SubArray{MatrixChunk{T}, 1, Vector{MatrixChunk{T}}, Tuple{UnitRange{Int64}}, true}, Tuple{UnitRange{Int64}}}
     lmul    ::Vector{T}
-    lmuld   ::MPIVector{T}
+    lmuld   ::MPIVector{T, Tuple{UnitRange{Int64}}, SubArray{T, 1, Vector{T}, Tuple{UnitRange{Int64}}, true}, Tuple{Vector{Int64}}}
     rmul    ::Vector{T}
-    rmuld   ::MPIVector{T}
+    rmuld   ::MPIVector{T, Tuple{UnitRange{Int64}}, SubArray{T, 1, Vector{T}, Tuple{UnitRange{Int64}}, true}, Tuple{Vector{Int64}}}
 
     ZnearChunksStructMPI{T}() where {T} = new{T}()
     ZnearChunksStructMPI{T}(m, n, nChunks, chunks, lmul, lmuld, rmul, rmuld) where {T} = 
@@ -35,31 +36,25 @@ ZnearChunksStructMPI 类的初始化函数，将 lumld 和 rmuld 初始化为
 
 function ZnearChunksStructMPI{T}(chunks; m, n, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where {T<:Number}
 
+    Znear   =   ZnearChunksStructMPI{T}()
     nChunks =   length(chunks)
-    lmul    =   zeros(T, 0)
-    lmuld   =   mpiarray(T, np; partitation = np, buffersize = 0)
-    rmul    =   zeros(T, 0)
-    rmuld   =   mpiarray(T, np; partitation = np, buffersize = 0)
 
-    ZnearChunksStructMPI{T}(m, n, nChunks, chunks, lmul, lmuld, rmul, rmuld)
+    Znear.m = m
+    Znear.n = n
+    Znear.nChunks = nChunks
+    Znear.chunks = chunks
+
+    Znear
 end
 
 """
 实现左乘其它向量
 """
 function Base.:*(Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
-    # initialZchunksMulV!(Z)
-    nthds   =   nthreads()
-    BLAS.set_num_threads(1)
     sync!(x)
-    xghost = getGhostMPIVecs(x)
-    @inbounds @threads for ii in Z.chunks.indices[1]
-        Zchunks = Z.chunks[ii]
-        mul!(Zchunks.rmul, Zchunks, xghost)
-        setindex!(Z.rmuld, Zchunks.rmul, Zchunks.rowIndices)
-    end
-    BLAS.set_num_threads(nthds)
-
+    xghost = getGhostMPIVecs(x)    
+    # initialZchunksMulV!(Z)
+    mul_core!(Z, xghost)
     MPI.Barrier(x.comm)
     sync!(Z.rmuld)
 
@@ -72,36 +67,45 @@ end
 	这里必须注明类型以稳定计算，仅限本包使用。
 TBW
 """
-function getGhostICeoffVecs(y::MPIVector{T, I}) where {T, I}
+function getGhostICeoffVecs(y::MPIVector{T, I, DT, IG}) where {T, I, DT, IG}
     sparsevec(y.ghostindices[1], y.ghostdata)::SparseVector{T, Int}
 end
 
 """
-    getGhostICeoffVecs(y::MPIVector{T, I}) where {T, I}
+    getGhostICeoffVecs(y::SubMPIVector{T, I, DT, IG, SI, L}) where {T, I, DT, IG, SI, L}
     
 	这里必须注明类型以稳定计算，仅限本包使用。
 TBW
 """
-function getGhostICeoffVecs(y::SubMPIVector{T, I, SI, L}) where {T, I, SI, L}
+function getGhostICeoffVecs(y::SubMPIVector{T, I, DT, IG, SI, L}) where {T, I, DT, IG, SI, L}
     yp = y.parent
 	sparsevec(yp.ghostindices[1], yp.ghostdata[:, y.indices[2]])::SparseVector{T, Int}
+end
+
+function mul_core!(Z, xghost)
+
+    nthds   =   nthreads()
+    BLAS.set_num_threads(1)
+    cubeIndices = Z.chunks.indices[1]
+    @inbounds @threads for ii in cubeIndices
+        Zchunk = Z.chunks[ii]
+        mul!(Zchunk.rmul, Zchunk, xghost)
+        setindex!(Z.rmuld, Zchunk.rmul, Zchunk.rowIndices)
+    end
+    BLAS.set_num_threads(nthds)
+
+    nothing
+
 end
 
 """
 实现左乘其它向量，仅限本包使用。
 """
 function Base.:*(Z::T, x::SubOrMPIVector) where{T<:ZnearChunksStructMPI}
-    # initialZchunksMulV!(Z)
-    nthds   =   nthreads()
-    BLAS.set_num_threads(1)
     sync!(x.parent)
-    xghost = getGhostICeoffVecs(x)
-    @inbounds @threads for ii in Z.chunks.indices[1]
-        Zchunks = Z.chunks[ii]
-        mul!(Zchunks.rmul, Zchunks, xghost)
-        setindex!(Z.rmuld, Zchunks.rmul, Zchunks.rowIndices)
-    end
-    BLAS.set_num_threads(nthds)
+    xghost = getGhostICeoffVecs(x)    
+    # initialZchunksMulV!(Z)
+    mul_core!(Z, xghost)
 
     MPI.Barrier(x.comm)
     sync!(Z.rmuld)
@@ -110,17 +114,10 @@ function Base.:*(Z::T, x::SubOrMPIVector) where{T<:ZnearChunksStructMPI}
 end
 
 function LinearAlgebra.mul!(y::SubOrMPIVector, Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
-    # initialZchunksMulV!(Z)
-    nthds   =   nthreads()
-    BLAS.set_num_threads(1)
     sync!(x)
-    xghost = getGhostICeoffVecs(x)
-    @inbounds @threads for ii in Z.chunks.indices[1]
-        Zchunks = Z.chunks[ii]
-        mul!(Zchunks.rmul, Zchunks, xghost)
-        setindex!(Z.rmuld, Zchunks.rmul, Zchunks.rowIndices)
-    end
-    BLAS.set_num_threads(nthds)
+    xghost = getGhostICeoffVecs(x)    
+    # initialZchunksMulV!(Z)
+    mul_core!(Z, xghost)
 
     MPI.Barrier(x.comm)
     copyto!(getdata(y), Z.rmuld.data)
@@ -129,17 +126,10 @@ function LinearAlgebra.mul!(y::SubOrMPIVector, Z::T, x::MPIVector) where{T<:Znea
 end
 
 function LinearAlgebra.mul!(y::SubOrMPIVector, Z::T, x::SubMPIVector) where{T<:ZnearChunksStructMPI}
-    # initialZchunksMulV!(Z)
-    nthds   =   nthreads()
-    BLAS.set_num_threads(1)
     syncUnknownVectorView!(x)
     xghost = getGhostICeoffVecs(x)
-    @inbounds @threads for ii in Z.chunks.indices[1]
-        Zchunks = Z.chunks[ii]
-        mul!(Zchunks.rmul, Zchunks, xghost)
-        setindex!(Z.rmuld, Zchunks.rmul, Zchunks.rowIndices)
-    end
-    BLAS.set_num_threads(nthds)
+    # initialZchunksMulV!(Z)
+    mul_core!(Z, xghost)
 
     MPI.Barrier(x.parent.comm)
     copyto!(getdata(y), Z.rmuld.data)
@@ -196,9 +186,9 @@ function initialZnearChunksMPI(level; nbf, CT = Complex{Precision.FT}, comm = MP
                                                     st:ed; end , indices, ghostindices))
     data = view(ghostdata, dataInGhostData...)
 
-    chunks  = MPIArray{eltype(ghostdata), typeof(indices), 1
-                        }(  data, indices, OffsetArray(data, indices), comm, 
-                            rank, datasize, rank2indices, ghostdata, ghostindices, grank2gindices, rrank2indices)
+    chunks  = MPIArray{eltype(ghostdata), typeof(indices), 1, typeof(data), typeof(ghostindices)}( 
+                        data, indices, OffsetArray(data, indices), comm, 
+                        rank, datasize, rank2indices, ghostdata, ghostindices, grank2gindices, rrank2indices)
 
     Znear   = ZnearChunksStructMPI{CT}(chunks; m = nbf, n = nbf)
     initialZchunksMulV!(Znear, level)
@@ -245,7 +235,8 @@ function MPIvecOnLevel(cubes::PartitionedVector{C}; T = Precision.CT, comm = MPI
     remoteranks     = indice2ranks(indices, rank2ghostindices)
     rrank2indices   = remoterank2indices(remoteranks, indices, rank2ghostindices; localrank = rank)
 
-    y = MPIArray{eltype(ghostdata), typeof(indices), 1}(data, indices, OffsetArray(data, indices), comm, rank, datasize, rank2indices, ghostdata, ghostindices, grank2gindices, rrank2indices)
+    y = MPIArray{eltype(ghostdata), typeof(indices), 1, typeof(data), typeof(ghostindices)}(
+                data, indices, OffsetArray(data, indices), comm, rank, datasize, rank2indices, ghostdata, ghostindices, grank2gindices, rrank2indices)
 
     return y
 

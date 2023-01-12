@@ -2,14 +2,15 @@ using MoM_Kernels:AbstractLevel, CubeInfo, PolesInfo, InterpInfo, memoryAllocati
 
 """
 层信息（MPI分布式）
+
 ID          ::IT，层序号
 L           ::IT, 本层截断项数
-cubes       ::MPIVector{Vector{CubeInfo{IT, FT}}, IDCSCT} 包含每一个盒子信息的向量
+cubes       ::PartitionedVector{Vector{CubeInfo{IT, FT}}, IDCSCT} 包含每一个盒子信息的向量
 cubeEdgel   ::FT，本层盒子的边长
 poles       ::PolesInfo{IT, FT}, 多极子采样信息
 interpWθϕ   ::InterpInfo{IT, FT}, 插值信息
-aggS        ::MPIArray{Complex{FT}, 3}， 聚合项
-disaggG     ::MPIArray{Complex{FT}, 3}， 解聚项
+aggS        ::MPIArray{Complex{FT}, 3, ...}， 聚合项
+disaggG     ::MPIArray{Complex{FT}, 3, ...}， 解聚项
 phaseShift2Kids  ::Array{Complex{FT}, 3}，本层盒子到子层盒子的相移因子 
 αTrans      ::Array{Complex{FT}, 3}， 本层盒子远亲组之间的转移因子，根据相对位置共有 7^3 - 3^3 = 316 个
 αTransIndex ::Array{IT, 2}, 远亲盒子的相对位置到其转移因子在所有转移因子数组的索引
@@ -22,14 +23,14 @@ mutable struct LevelInfoMPI{IT<:Integer, FT<:Real} <: AbstractLevel
     cubeEdgel   ::FT
     poles       ::PolesInfo{FT}
     interpWθϕ   ::InterpInfo{IT, FT}
-    aggS        ::MPIArray{Complex{FT}, IDCSAT, 3} where IDCSAT
-    aggStransfer::PatternTransfer{Complex{FT}, IDCSATT} where IDCSATT
-    disaggG     ::MPIArray{Complex{FT}, IDCSDT, 3} where IDCSDT
-    disaggGtransfer     ::PatternTransfer{Complex{FT}, IDCSDTT} where IDCSDTT
+    aggS        ::MPIArray{Complex{FT}, NTuple{3, UnitRange{Int64}}, 3, SubArray{Complex{FT}, 3, Array{Complex{FT}, 3}, NTuple{3, UnitRange{Int64}}, false}, NTuple{3, UnitRange{Int64}}}
+    aggStransfer::PatternTransfer{Complex{FT}, NTuple{3, UnitRange{Int64}}}
+    disaggG     ::MPIArray{Complex{FT}, NTuple{3, UnitRange{Int64}}, 3, SubArray{Complex{FT}, 3, Array{Complex{FT}, 3}, NTuple{3, UnitRange{Int64}}, false}, NTuple{3, UnitRange{Int64}}}
+    disaggGtransfer     ::PatternTransfer{Complex{FT}, Tuple{Vector{Int64}, UnitRange{Int64}, UnitRange{Int64}}}
     phaseShift2Kids     ::Matrix{Complex{FT}}
     phaseShiftFromKids  ::Matrix{Complex{FT}}
     αTrans      ::Matrix{Complex{FT}}
-    αTransTransfer ::PatternTransfer{Complex{FT}, IDCSTTT} where IDCSTTT
+    αTransTransfer ::PatternTransfer{Complex{FT}, Tuple{UnitRange{Int64}, UnitRange{Int64}, Vector{Int64}}}
     αTransIndex ::OffsetArray{IT, 3, Array{IT, 3}}
     LevelInfoMPI{IT, FT}() where {IT<:Integer, FT<:Real} = new{IT, FT}()
     LevelInfoMPI{IT, FT}(   ID, L, nCubes, cubes, cubeEdgel, poles, interpWθϕ, aggS, aggStransfer, disaggG,

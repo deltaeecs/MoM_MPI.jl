@@ -41,7 +41,7 @@ function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVeclw::T) where {LT<:LevelInfo
     return nothing
 end
 
-function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVec::MPIVector{T, I}) where {LT<:LevelInfoMPI, T<:Number, I}
+function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVec::MPIVector{T, I, DT, IG}) where {LT<:LevelInfoMPI, T<:Number, I, DT, IG}
     ## 本 rank 的IVec
     IVeclw  =   IVec.dataOffset
 
@@ -155,7 +155,7 @@ function MoM_Kernels.agg2HighLevel!(tLevel::LT, kLevel::LT; comm = MPI.COMM_WORL
     ## 置零避免累加错误
     fill!(tAggS.ghostdata, 0)
     # 对盒子循环
-    BLAS.set_num_threads(1)#
+    BLAS.set_num_threads(1)
     @threads for iCube in cubeIndices
         cube    =   cubes[iCube]
         # 本线程的临时变量

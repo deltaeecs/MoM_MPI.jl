@@ -41,13 +41,15 @@ function allocatePatternCubes(cubes::PartitionedVector, nPoles; T = Precision.CT
     datasize        =   last.(last(allindices))
 
     ghostindices    =   indices
-    data            =   ghostdata
+    data            =   view(ghostdata, 1:nPoles, 1:2, 1:ngbfslw)
     
     # ghost rank to ghost indices (空)
     grank2gindices  = typeof(rank2indices)()
     # 最终获得远程进程所需数据在本进程存储的 indices 上的位置 (空)
     rrank2indices   = typeof(rank2indices)()
-    aggSBF = MPIArray{T, typeof(indices), 3}(data, indices, OffsetArray(data, indices), comm, rank, datasize, rank2indices, ghostdata, ghostindices, grank2gindices, rrank2indices)
+    aggSBF = MPIArray{T, typeof(indices), 3, typeof(data), typeof(ghostindices)}(
+                        data, indices, OffsetArray(data, indices), comm, rank, 
+                        datasize, rank2indices, ghostdata, ghostindices, grank2gindices, rrank2indices)
 
     sync!(aggSBF)
 

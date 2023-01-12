@@ -32,7 +32,7 @@ function get_Orthonormal_basis_vectorsz(b, restart::Int)
 		rrank2localindices[k] = (v..., 1:restartp1)
 	end
 
-	return MPIMatrix{T, typeof(indices)}(	data, indices, dataOffset, b.comm, b.myrank, Vsize, 
+	return MPIMatrix{T, typeof(indices), typeof(data), typeof(ghostindices)}(	data, indices, dataOffset, b.comm, b.myrank, Vsize, 
 											rank2indices, ghostdata, ghostindices, grank2ghostindices, rrank2localindices)
 
 end
