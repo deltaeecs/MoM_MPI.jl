@@ -183,7 +183,7 @@ function gmres!(x::MPIVector, A, b::MPIVector;
 		end
 	end
 
-	verbose && println()
+	(rank == root) && verbose && println()
 	setconv(history, converged(iterable))
 	log && shrink!(history)
 

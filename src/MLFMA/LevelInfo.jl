@@ -24,7 +24,7 @@ mutable struct LevelInfoMPI{IT<:Integer, FT<:Real} <: AbstractLevel
     poles       ::PolesInfo{FT}
     interpWθϕ   ::InterpInfo{IT, FT}
     aggS        ::MPIArray{Complex{FT}, NTuple{3, UnitRange{Int64}}, 3, SubArray{Complex{FT}, 3, Array{Complex{FT}, 3}, NTuple{3, UnitRange{Int64}}, false}, NTuple{3, UnitRange{Int64}}}
-    aggStransfer::PatternTransfer{Complex{FT}, NTuple{3, UnitRange{Int64}}}
+    aggStransfer::PatternTransfer{Complex{FT}, Tuple{Vector{Int64}, UnitRange{Int64}, UnitRange{Int64}}}
     disaggG     ::MPIArray{Complex{FT}, NTuple{3, UnitRange{Int64}}, 3, SubArray{Complex{FT}, 3, Array{Complex{FT}, 3}, NTuple{3, UnitRange{Int64}}, false}, NTuple{3, UnitRange{Int64}}}
     disaggGtransfer     ::PatternTransfer{Complex{FT}, Tuple{Vector{Int64}, UnitRange{Int64}, UnitRange{Int64}}}
     phaseShift2Kids     ::Matrix{Complex{FT}}
@@ -266,7 +266,7 @@ function update_local_interpInfo_onLevel(tLevel, kLevel)
     kCubesInterval  =   first(cubesKidsInterval[tcubeIndices[1]]):last(cubesKidsInterval[tcubeIndices[end]])
     # 本进程用到的所有子盒子的辐射积分
     tθϕpoleIndicesUsed  =  (length(tθϕpoleIndices) == length(kpoleIndices)) ? kpoleIndices : tθϕpoleIndices
-    kAggStransfer   =   PatternTransfer((tθϕpoleIndicesUsed, tiθϕIndices, kCubesInterval), kLevel.aggS)
+    kAggStransfer   =   PatternTransfer((collect(tθϕpoleIndicesUsed), tiθϕIndices, kCubesInterval), kLevel.aggS)
 
     ### 再计算解聚相关项
     ## 局部插值矩阵
