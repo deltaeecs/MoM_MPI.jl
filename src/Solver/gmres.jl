@@ -193,5 +193,13 @@ end
 
 function update_solution!(x::MPIVector, y, arnoldi::ArnoldiDecomp{T}, Pr::Identity, k::Int, Ax) where {T}
     # Update x ← x + V * y
-    mul!(x, view(arnoldi.V, :, 1 : k - 1), y)
+    mul!(x, view(arnoldi.V, :, 1 : k - 1), y, one(T), one(T))
+end
+
+
+function update_solution!(x::MPIVector, y, arnoldi::ArnoldiDecomp{T}, Pr::Identity, k::Int, Ax) where {T}
+    # Computing x ← x + Pr \ (V * y) and use Ax as a work space
+    mul!(Ax, view(arnoldi.V, :, 1 : k - 1), y)
+    ldiv!(Pr, Ax)
+    axpy!(1, Ax, x)
 end
