@@ -5,7 +5,7 @@ using IterativeSolvers: Adivtype, ArnoldiDecomp, Residual, init!, init_residual!
 
 IterativeSolvers.zerox(A::AbstractArray, b::MPIVector) = deepcopy(b)
 
-function get_Orthonormal_basis_vectorsz(b, restart::Int)
+function get_Orthonormal_basis_vectors(b, restart::Int)
 
 	T = eltype(b)
 	restartp1 = restart + 1
@@ -63,7 +63,7 @@ function IterativeSolvers.gmres_iterable!(x::MPIVector, A, b::MPIVector;
 							orth_meth::OrthogonalizationMethod = ModifiedGramSchmidt())
 	T = Adivtype(A, b)
 
-	V = get_Orthonormal_basis_vectorsz(b, restart)
+	V = get_Orthonormal_basis_vectors(b, restart)
 
 	# Approximate solution
 	arnoldi = ArnoldiDecomp(A, restart, T, V)
@@ -97,7 +97,6 @@ function IterativeSolvers.init!(arnoldi::ArnoldiDecomp{T}, x, b::MPIArray, Pl, A
         mul!(Ax, arnoldi.A, x)
         # first_col .-= Ax
 		axpy!(-1, Ax, first_col)
-
     end
 
     ldiv!(Pl, first_col)
@@ -121,17 +120,16 @@ TBW
 function syncUnknownVectorView!(V::SubMPIVector; comm = V.parent.comm, rank = V.parent.myrank, np = MPI.Comm_size(comm))
 
 	Vp 	= V.parent
-	k 	= V.indices[2]
 
 	# begin sync
 	req_all = MPI.Request[]
 	begin
 		for (ghostrank, indices) in Vp.grank2ghostindices
-			req = MPI.Irecv!(view(Vp.ghostdata, indices[1], k), ghostrank, ghostrank*np + rank, Vp.comm)
+			req = MPI.Irecv!(view(Vp.ghostdata, indices...), ghostrank, ghostrank*np + rank, Vp.comm)
 			push!(req_all, req)
 		end
 		for (remoterank, indices) in Vp.rrank2localindices
-			req = MPI.Isend(Vp.data[indices[1], k], remoterank, rank*np + remoterank, Vp.comm)
+			req = MPI.Isend(Vp.data[indices...], remoterank, rank*np + remoterank, Vp.comm)
 			push!(req_all, req)
 		end
 	end
@@ -183,7 +181,7 @@ function gmres!(x::MPIVector, A, b::MPIVector;
 		end
 	end
 
-	verbose && println()
+	(rank == root) && verbose && println()
 	setconv(history, converged(iterable))
 	log && shrink!(history)
 
