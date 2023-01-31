@@ -45,6 +45,7 @@ function solve!(A::LinearMapType{T}, x::MPIVector, b::MPIVector;
     SimulationParams.SHOWIMAGE  &&  convergencePlot(relresnorm)
 
     # 将相对残差写入文件
+    !ispath(SimulationParams.resultDir) && mkpath(SimulationParams.resultDir)
     open(joinpath(SimulationParams.resultDir, "$(solverT)_ch$str.txt"), "w") do io
         for resi in relresnorm
             write(io, "$resi\n" )

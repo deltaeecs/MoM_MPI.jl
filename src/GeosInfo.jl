@@ -31,5 +31,3 @@ end
 function MoM_Kernels.getGeosInterval(::AbstractVector{T})::UnitRange{Int} where {T<:HexahedraInfo}
     return GeosInterval.hexa
 end
-
-
