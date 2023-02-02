@@ -121,15 +121,16 @@ function syncUnknownVectorView!(V::SubMPIVector; comm = V.parent.comm, rank = V.
 
 	Vp 	= V.parent
 
+	k 	= V.indices[2]
 	# begin sync
 	req_all = MPI.Request[]
 	begin
 		for (ghostrank, indices) in Vp.grank2ghostindices
-			req = MPI.Irecv!(view(Vp.ghostdata, indices...), ghostrank, ghostrank*np + rank, Vp.comm)
+			req = MPI.Irecv!(view(Vp.ghostdata, indices[1], k), ghostrank, ghostrank*np + rank, Vp.comm)
 			push!(req_all, req)
 		end
 		for (remoterank, indices) in Vp.rrank2localindices
-			req = MPI.Isend(Vp.data[indices...], remoterank, rank*np + remoterank, Vp.comm)
+			req = MPI.Isend(Vp.data[indices[1], k], remoterank, rank*np + remoterank, Vp.comm)
 			push!(req_all, req)
 		end
 	end
