@@ -134,9 +134,8 @@ function calZnearChunksCFIE!(cubes, geosInfo::AbstractVector{GT},
     ZnearChunkslc   =   getGhostMPIVecs(ZnearChunks)
     # 进度条
     cond = true
-    comm_rank = ZnearChunks.myrank
 
-    pmeter = Progress(length(idcs); desc = "Cal Z on rank $(comm_rank)...", dt = 1, color = :origin, enabled = cond)
+    pmeter = Progress(length(idcs); desc = "Z on rank $(ZnearChunks.myrank)...", dt = 1, barglyphs=BarGlyphs("[=> ]"), color = :blue, enabled = cond)
 
     # 计算
     @threads for i in idcs

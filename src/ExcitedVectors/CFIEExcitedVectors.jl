@@ -10,7 +10,7 @@ function excitationVectorCFIE!(V::MPIVector, source::ST, geosInfo::SparseVector{
     nt  =   length(geosInfo.nzval)
     # V 在本rank的区间
     Vindices =  V.indices[1]
-    pmeter  =   Progress(nt, "Calculating V...")
+    pmeter  =   Progress(nt; desc = "V on rank $(V.myrank)...", dt = 1, barglyphs=BarGlyphs("[=> ]"), color = :blue, enabled = true)
     lockV   =   SpinLock()
     # 开始对四面体形循环计算
     @threads for geo in geosInfo.nzval
