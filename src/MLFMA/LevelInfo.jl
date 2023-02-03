@@ -144,7 +144,7 @@ function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT
         level.aggS  =   aggS
         level.disaggG = disaggG
         # 更新本进程的转移矩阵，只保留本进程用到的部分
-        update_local_transInfo_onLevel(level)
+        update_local_transInfo_onLevel!(level)
     end
 
     # 对层循环进行插值矩阵本地化
@@ -154,14 +154,14 @@ function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT
         # 子层
         kLevel  =   levels[iLevel + 1]
         # 更新每个进程真正用到的本地化插值矩阵避免每次迭代重新算
-        update_local_interpInfo_onLevel(tLevel, kLevel)
+        update_local_interpInfo_onLevel!(tLevel, kLevel)
     end #iLevel
 
     return nothing
 
 end
 
-function update_local_transInfo_onLevel(level)
+function update_local_transInfo_onLevel!(level)
     # 本 level 盒子
     cubes = level.cubes
     # 本层的316个转移因子和其索引 OffsetArray 矩阵
@@ -214,12 +214,12 @@ function AllGatherIntervals(cubes::PartitionedVector; comm = MPI.COMM_WORLD)
 end
 
 """
-    update_local_interpInfo_onLevel(tlevel, kLevel)
+    update_local_interpInfo_onLevel!(tlevel, kLevel)
 
     根据层间信息更新多极子、插值、转移矩阵等信息方便计算，同时构建 聚合、解聚项的 数据通信算子。
 TBW
 """
-function update_local_interpInfo_onLevel(tLevel, kLevel)
+function update_local_interpInfo_onLevel!(tLevel, kLevel)
     # 子层插值矩阵
     interpWθϕ   =   kLevel.interpWθϕ
     θCSC    =   interpWθϕ.θCSC
