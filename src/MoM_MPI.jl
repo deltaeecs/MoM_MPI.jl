@@ -13,7 +13,8 @@ export  MPIvecOnLevel,
         getGeosInfo, 
         LevelInfoMPI, getFarNeighborCubeIDs, 
         loadCubes, loadMPILevel!, loadMPILevel, loadOctree,
-        getExcitationVector!
+        getExcitationVector!,
+        @mpitime
 
 # 通用接口
 include("Common_utlis.jl")
