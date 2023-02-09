@@ -48,20 +48,6 @@ function ZnearChunksStructMPI{T}(chunks; m, n, comm = MPI.COMM_WORLD, rank = MPI
 end
 
 """
-实现左乘其它向量
-"""
-function Base.:*(Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
-    sync!(x)
-    xghost = getGhostMPIVecs(x)    
-    # initialZchunksMulV!(Z)
-    mul_core!(Z, xghost)
-    MPI.Barrier(x.comm)
-    sync!(Z.rmuld)
-
-    return deepcopy(Z.rmuld)
-end
-
-"""
     getGhostICeoffVecs(y::MPIVector{T, I}) where {T, I}
     
 	这里必须注明类型以稳定计算，仅限本包使用。
@@ -99,17 +85,35 @@ function mul_core!(Z, xghost)
 end
 
 """
-实现左乘其它向量，仅限本包使用。
+实现左乘其它向量
 """
-function Base.:*(Z::T, x::SubOrMPIVector) where{T<:ZnearChunksStructMPI}
-    sync!(x.parent)
-    xghost = getGhostICeoffVecs(x)    
-    # initialZchunksMulV!(Z)
+function Base.:*(Z::T, x::MPIVector) where{T<:ZnearChunksStructMPI}
+    # 同步向量
+    sync!(x)
+    # 获取本进程用到的部分
+    xghost = getGhostMPIVecs(x)
+    # 计算
     mul_core!(Z, xghost)
-
     MPI.Barrier(x.comm)
+    # 输出向量同步
     sync!(Z.rmuld)
 
+    return deepcopy(Z.rmuld)
+end
+
+"""
+实现左乘其它向量，仅限本包使用。
+"""
+function Base.:*(Z::T, x::SubMPIVector) where{T<:ZnearChunksStructMPI}
+    # 同步向量
+    syncUnknownVectorView!(x)
+    # 获取本进程用到的部分
+    xghost = getGhostMPIVecs(x)
+    # 计算
+    mul_core!(Z, xghost)
+    MPI.Barrier(x.comm)
+    # 输出向量同步
+    sync!(Z.rmuld)
     return deepcopy(Z.rmuld)
 end
 
@@ -164,6 +168,7 @@ end
 """
 function initialZnearChunksMPI(level; nbf, CT = Complex{Precision.FT}, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm))
 
+    @info "Initializing Znear on rank $rank..."
     # 本进程的 ghostchunks (包含了在计算预条件时用到的远亲)
     cubes       =   level.cubes
 
@@ -192,7 +197,7 @@ function initialZnearChunksMPI(level; nbf, CT = Complex{Precision.FT}, comm = MP
 
     Znear   = ZnearChunksStructMPI{CT}(chunks; m = nbf, n = nbf)
     initialZchunksMulV!(Znear, level)
-
+    @info "Znear Initialized on rank $rank..."
     MPI.Barrier(comm)
 
     return Znear
@@ -219,7 +224,7 @@ function MPIvecOnLevel(cubes::PartitionedVector{C}; T = Precision.CT, comm = MPI
     allindices      =   MPI.Allgather(indices, comm)
     rank2indices    =   Dict(zip(0:(np-1), allindices))
     datasize        =   last.(last(allindices))
-    
+
     # vector + ghost data 的区间
     ghostindices    =   map(nearCubesIndice -> reduce(vcat, [cubes[idc].bfInterval for idc in nearCubesIndice]), nearCubesIndices)
     dataInGhostData =   Tuple(map((i, gi) -> begin  st = searchsortedfirst(gi, i[1]); 
