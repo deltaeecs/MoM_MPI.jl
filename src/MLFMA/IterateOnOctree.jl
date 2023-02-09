@@ -21,7 +21,7 @@ function MoM_Kernels.aggOnBF!(level::LT, aggSBF, IVeclw::T) where {LT<:LevelInfo
     # 本地数据
     aggSlc  =   aggS.dataOffset
 
-    @threads for iCube in cubeIndices
+    for iCube in cubeIndices
         # 盒子信息
         cube    =   cubes[iCube]
         # 基函数区间
@@ -156,7 +156,7 @@ function MoM_Kernels.agg2HighLevel!(tLevel::LT, kLevel::LT; comm = MPI.COMM_WORL
     fill!(tAggS.ghostdata, 0)
     # 对盒子循环
     BLAS.set_num_threads(1)
-    @threads for iCube in cubeIndices
+    for iCube in cubeIndices
         cube    =   cubes[iCube]
         # 本线程的临时变量
         tid     =   Threads.threadid()
@@ -214,7 +214,7 @@ function MoM_Kernels.transOnLevel!(level::LT) where {LT<:LevelInfoMPI}
     fill!(disaggG.ghostdata, 0)
 
     # 对盒子循环
-    @threads for iCube in cubeIndices
+    for iCube in cubeIndices
         cube    =   cubes[iCube]
         farNeighborIDs = cube.farneighbors
         # 本线程数据
@@ -293,7 +293,7 @@ function MoM_Kernels.disagg2KidLevel!(tLevel::LT, kLevel::LT; comm = MPI.COMM_WO
     disGInterpedθ2s =   zeros(CT, size(θCSCT, 1), size(tDisaggGlw, 2), nthds)
     disGInterped2s  =   zeros(CT, size(ϕCSCT, 1), size(tDisaggGlw, 2), nthds)
     # 对盒子循环
-    @threads for iCube in tCubesIntervallw
+    for iCube in tCubesIntervallw
         cube    =   cubes[iCube]
         # 子盒子数
         nkCube  =   length(cube.kidsInterval)
@@ -367,7 +367,7 @@ function MoM_Kernels.disaggOnBF!(level::LT, disaggSBF, ZID) where {LT <: LevelIn
     # 避免多线程内存分配问题
     ZInTemps = zeros(CT, nthds)
     # 对盒子循环计算
-    @threads for iCube in cubeIndices
+    for iCube in cubeIndices
         tid     =   Threads.threadid()
         # 盒子信息
         cube    =   cubes[iCube]

@@ -13,7 +13,7 @@ function excitationVectorCFIE!(V::MPIVector, source::ST, geosInfo::SparseVector{
     pmeter  =   Progress(nt; desc = "V on rank $(V.myrank)...", dt = 1, barglyphs=BarGlyphs("[=> ]"), color = :blue, enabled = true)
     lockV   =   SpinLock()
     # 开始对四面体形循环计算
-    @threads for geo in geosInfo.nzval
+    for geo in geosInfo.nzval
         next!(pmeter)
         # geo.inBfsID 全不在本区间则跳过
         all(x -> !(x in Vindices), geo.inBfsID) && continue

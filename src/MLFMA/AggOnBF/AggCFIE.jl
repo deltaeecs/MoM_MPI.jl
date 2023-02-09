@@ -41,7 +41,7 @@ function MoM_Kernels.aggSBFOnLevelCFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, l
 
     # 进度条
     pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) RWG (CFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
-    @threads for iCube in cubeIndices 
+    for iCube in cubeIndices 
 
         # 盒子
         cube    =   cubes[iCube]

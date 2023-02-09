@@ -73,7 +73,7 @@ function mul_core!(Z, xghost)
     nthds   =   nthreads()
     BLAS.set_num_threads(1)
     cubeIndices = Z.chunks.indices[1]
-    @inbounds @threads for ii in cubeIndices
+    @inbounds for ii in cubeIndices
         Zchunk = Z.chunks[ii]
         mul!(Zchunk.rmul, Zchunk, xghost)
         setindex!(Z.rmuld, Zchunk.rmul, Zchunk.rowIndices)

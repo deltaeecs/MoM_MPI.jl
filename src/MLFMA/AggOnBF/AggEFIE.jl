@@ -43,7 +43,7 @@ function MoM_Kernels.aggSBFOnLevelEFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, l
 
     # 进度条
     pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) RWG (Tri + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
-    @threads for iCube in cubeIndices
+    for iCube in cubeIndices
         # 盒子
         cube    =   cubes[iCube]
         # 盒子中心
@@ -145,7 +145,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     
     # 进度条
     pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) SWG (Tetra + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
-    @threads for iCube in cubeIndices
+    for iCube in cubeIndices
 
         # 盒子
         cube    =   cubes[iCube]
@@ -259,7 +259,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     
     # 进度条
     pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) PWC (Tetra + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
-    @threads for iCube in cubeIndices
+    for iCube in cubeIndices
         # 盒子
         cube    =   cubes[iCube]
         # 盒子中心
@@ -356,7 +356,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     JK_0 = Params.JK_0
     # 进度条
     pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) PWC (Hexa + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
-    @threads for iCube in cubeIndices
+    for iCube in cubeIndices
         # 盒子
         cube    =   cubes[iCube]
         # 盒子中心
@@ -455,7 +455,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     
     # 进度条
     pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) RBF (Hexa + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
-    @threads for iCube in cubeIndices 
+    for iCube in cubeIndices 
         # 盒子
         cube    =   cubes[iCube]
         # 盒子中心

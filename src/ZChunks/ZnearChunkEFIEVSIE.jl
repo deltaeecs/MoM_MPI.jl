@@ -230,7 +230,7 @@ function calZnearChunksCFIE!(cubes, geosInfo1::AbstractVector{T1}, geosInfo2::Ab
     cond = true
     pmeter = Progress(length(idcs); desc = "Cal Z on rank $(ZnearChunks)...", dt = 1, barglyphs=BarGlyphs("[=> ]"), color = :blue, enabled = cond)
     # 计算
-    @threads for i in idcs
+    for i in idcs
         calZnearChunkEFIEonCube!(i, cubes, geosInfo1, geosInfo2, ZnearChunkslc[i], bfT)
         next!(pmeter)
     end
