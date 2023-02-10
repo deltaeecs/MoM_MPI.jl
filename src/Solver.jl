@@ -23,7 +23,8 @@ solverT::Symbol  求解器类型
 """
 function solve!(A::LinearMapType{T}, x::MPIVector, b::MPIVector; 
     solverT::Symbol = :gmres!, Pl = Identity(), Pr = Identity(), rtol = 1e-3, 
-    maxiter = 1000, str = "", restart = 200, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), root  = 0) where{T<:Number}
+    maxiter = 1000, str = "", restart = 200, verbose = true,
+    comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), root  = 0) where{T<:Number}
 
     FT = real(T)
     # 迭代求解器
@@ -35,7 +36,7 @@ function solve!(A::LinearMapType{T}, x::MPIVector, b::MPIVector;
     # 迭代求解
     rank == root && println("Solving matrix function with iterate solver $solverT, with initial resnorm $resnorm0. ")
     # try 
-    ICoeff, ch       =   solver(x, A, b; restart = restart, abstol = resnormtol, Pl = Pl, Pr = Pr,  log = true, verbose=true, maxiter = maxiter)
+    ICoeff, ch       =   solver(x, A, b; restart = restart, abstol = resnormtol, Pl = Pl, Pr = Pr,  log = true, verbose=verbose, maxiter = maxiter)
     saveCurrent(ICoeff; str = str)
 
     # 相对残差结果
