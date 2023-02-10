@@ -1,3 +1,4 @@
+using MoM_Basics:getFreeVns, GQ1DID2GQ3DIDVector, getFreeVIDFromGQ3DID
 using MoM_Kernels:aggSBFOnLevel, aggSBFOnLevel!
 
 """
@@ -429,9 +430,10 @@ end
 """
 在本进程计算叶层聚合项, 输入为四面体信息和 SWG 基函数信息
 """
-function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level, hexasInfo::AbstractVector{HexahedraInfo{IT, FT, CT}}, 
-    ::Type{BFT}) where {IT<:Integer, FT<:Real, CT<:Complex{FT}, BFT<:RBF}
+function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level, hexasInfo::AbstractVector{VT}, 
+    ::Type{BFT}) where {VT<:HexahedraInfo, BFT<:RBF}
 
+    CT = eltype(aggSBF)
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
