@@ -1,8 +1,8 @@
 
 using MoM_Kernels:EFIEOnTris, EFIEOnNearTris, EFIEOnTetraSWG, EFIEOnNearTetrasSWG, EFIEOnTetrasSWG
 using MoM_Kernels:EFIEOnTetraPWCSepPV, EFIEOnNearTetrasPWC, EFIEOnTetrasPWC
-using MoM_Kernels:EFIEOnHexasRBF, EFIEOnNearHexasRBF, EFIEOnHexasRBF, EFIEOnHexaPWCSepPV, EFIEOnNearHexasPWC
-using MoM_Kernels:EFIEOnHexasPWC, EFIEOnNearHexaTetraPWC, EFIEOnHexaTetraPWC
+using MoM_Kernels:EFIEOnHexaRBF, EFIEOnNearHexasRBF, EFIEOnHexasRBF, EFIEOnHexaPWCSepPV, EFIEOnNearHexasPWC
+using MoM_Kernels:EFIEOnHexaPWC, EFIEOnHexasPWC, EFIEOnNearHexaTetraPWC, EFIEOnHexaTetraPWC
 
 """
     getGeoIDsInNearCubes(cube, cubes)
