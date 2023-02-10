@@ -21,15 +21,15 @@ function MoM_Kernels.excitationVectorEFIE!(V::MPIVector, source::ST, geosInfo::S
         # geo.inBfsID 全不在本区间则跳过
         all(x -> !(x in Vindices), geo.inBfsID) && continue
         # 三角形相关激励向量
-        Vtri    =   excitationVectorEFIE(source, geo, sbfType)
+        Vgeo    =   excitationVectorEFIE(source, geo, sbfType)
         # 写入结果
         for ni in eachindex(geo.inBfsID)
             n = geo.inBfsID[ni]
             # 跳过半基函数
             (n == 0) && continue
-            lock(lockV)
-            V[n] += Vtri[ni]
-            unlock(lockV)
+            geo.inBfsID[i] in Vindices && begin
+                V[n] += Vgeo[i]
+            end
         end
     end # for geo
 
@@ -49,20 +49,20 @@ function MoM_Kernels.excitationVectorEFIE!(V::MPIVector, source::ST, geosInfo::A
     # V 在本rank的区间
     Vindices =  V.indices[1]
     pmeter  =   Progress(nt; desc = "V on rank $(V.myrank)...", dt = 1, barglyphs=BarGlyphs("[=> ]"), color = :blue, enabled = true)
-    lockV   =   SpinLock()
     # 开始对四面体形循环计算
     for geo in geosInfo.nzval
         next!(pmeter)
         # geo.inBfsID 全不在本区间则跳过
         all(x -> !(x in Vindices), geo.inBfsID) && continue
         # 四面体相关激励向量
-        Vtetra    =   excitationVectorEFIE(source, geo, vbfType)
+        Vgeo    =   excitationVectorEFIE(source, geo, vbfType)
         # 写入结果
-        lock(lockV)
-        for i in eachindex(geo.inBfsID)
-            V[geo.inBfsID[i]] += Vtetra[i]
+        for ni in eachindex(geo.inBfsID)
+            n = geo.inBfsID[ni]
+            n in Vindices && begin
+                V[n] += Vgeo[ni]
+            end
         end
-        unlock(lockV)
     end # for geo
 
     # 返回

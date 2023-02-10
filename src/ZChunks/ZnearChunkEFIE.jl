@@ -124,8 +124,6 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
                     # 判断边是不是基函数（边缘不算）
                     (m == 0 || n == 0) && continue
                     ## 分布式避免数据通信不再利用对称性填充
-                    # 避免线程锁的矩阵元循环方式下产生的条件
-                    # (tid > sid) && (m in cubeBFinterval) && continue
                     # 判断是不是在源盒子、场盒子包含的区间内
                     ((msInInterval[mi] & nsInInterval[ni])) && begin
                         Znear[m, n] += Zts[mi, ni]
@@ -137,7 +135,6 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
                 Zts    =   EFIEOnTris(trit, tris)
                 
                 # 写入数据
-                
                 for ni in 1:3, mi in 1:3
                     # 基函数id
                     m = trit.inBfsID[mi]
@@ -145,8 +142,6 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
 
                     # 判断边是不是基函数（边缘不算）
                     (m == 0 || n == 0) && continue
-                    # 避免线程锁的矩阵元循环方式下产生的条件
-                    (tid > sid) && (m in cubeBFinterval) && continue
 
                     # 判断是不是在源盒子、场盒子包含的区间内
                     ((msInInterval[mi] & nsInInterval[ni])) && begin
@@ -181,7 +176,7 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
     # 邻盒子的 geo id
     nearCubesGeoID  =   getGeoIDsInNearCubes(cube, cubes)
     # 是否为偏置数组（用于混合网格）
-    geoInterval =   getGeosInterval(geosInfo)
+    geoInterval     =   getGeosInterval(geosInfo)
     nearCubeBFindices = Znear.colIndices
     # 对场盒子内四面体循环
     # @inbounds for iGeo in 1:length(nearCubesGeoID)
@@ -234,9 +229,6 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
                     m = geot.inBfsID[mi]
                     n = geos.inBfsID[ni]
 
-                    # 避免线程锁的矩阵元循环方式下产生的条件
-                    (tid > sid) && (m in cubeBFinterval) && continue
-
                     # 判断是不是在源盒子、场盒子包含的区间内
                     ((msInInterval[mi] && nsInInterval[ni])) && begin
                         Znear[m, n] += Zts[mi, ni]
@@ -251,8 +243,6 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
                     # 基函数id
                     m = geot.inBfsID[mi]
                     n = geos.inBfsID[ni]
-                    # 避免线程锁的矩阵元循环方式下产生的条件
-                    (tid > sid) && (m in cubeBFinterval) && continue
 
                     # 判断是不是在源盒子、场盒子包含的区间内
                     ((msInInterval[mi] && nsInInterval[ni])) && begin
@@ -389,7 +379,6 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
     cube    =   cubes[iCube]
     # 常数
     Rsglr   =   Params.Rsglr
-    lockZ   =   SpinLock()
 
     # 盒子里的基函数区间
     cubeBFinterval  =   cube.bfInterval
@@ -441,9 +430,7 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
                     # 往矩阵填充结果
                     # 判断是不是在源盒子、场盒子包含的区间内
                     (msInInterval[mi] && nsInInterval[ni]) && begin
-                        lock(lockZ)
                         Znear[m, n] += Zts[mi, ni]
-                        unlock(lockZ)
                     end # begin
                 end
 
@@ -457,9 +444,7 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
                     n = geos.inBfsID[ni]
                     # 判断是不是在源盒子、场盒子包含的区间内
                     ((msInInterval[mi] && nsInInterval[ni])) && begin
-                        lock(lockZ)
                         Znear[m, n] += Zts[mi, ni]
-                        unlock(lockZ)
                     end
                 end
             else
@@ -473,9 +458,7 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
                     n = geos.inBfsID[ni]
                     # 判断是不是在源盒子、场盒子包含的区间内
                     ((msInInterval[mi] && nsInInterval[ni])) && begin
-                        lock(lockZ)
                         Znear[m, n] += Zts[mi, ni]
-                        unlock(lockZ)
                     end
                 end
                 
