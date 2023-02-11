@@ -1,4 +1,4 @@
-using MoM_Kernels:ZNEARCHUNK, MatrixChunk
+using MoM_Kernels:ZNEARCHUNK, MatrixChunk, CubeInfo
 
 """
 创建近场矩阵结构体，所包含的数据为所有盒子内的近场矩阵元，保存的是分布式数据
@@ -197,7 +197,7 @@ function initialZnearChunksMPI(level; nbf, CT = Complex{Precision.FT}, comm = MP
 
     Znear   = ZnearChunksStructMPI{CT}(chunks; m = nbf, n = nbf)
     initialZchunksMulV!(Znear, level)
-    @info "Znear Initialized on rank $rank..."
+    @info "Znear initialized on rank $rank."
     MPI.Barrier(comm)
 
     return Znear

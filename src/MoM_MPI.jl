@@ -14,6 +14,7 @@ export  MPIvecOnLevel,
         LevelInfoMPI, getFarNeighborCubeIDs, 
         loadCubes, loadMPILevel!, loadMPILevel, loadOctree,
         getExcitationVector!,
+        sparseApproximateInversePl,
         @mpitime
 
 # 通用接口
@@ -24,9 +25,6 @@ include("GeosInfo.jl")
 
 # 涉及 MPI 数据的八叉树、层的 IO, MLFMA计算 等
 include("MLFMA.jl")
-
-# 涉及阻抗矩阵
-include("Znear.jl")
 
 # 激励向量
 include("ExcitedVectors.jl")
