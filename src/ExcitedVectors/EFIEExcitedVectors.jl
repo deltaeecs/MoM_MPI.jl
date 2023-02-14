@@ -27,8 +27,8 @@ function MoM_Kernels.excitationVectorEFIE!(V::MPIVector, source::ST, geosInfo::S
             n = geo.inBfsID[ni]
             # 跳过半基函数
             (n == 0) && continue
-            geo.inBfsID[i] in Vindices && begin
-                V[n] += Vgeo[i]
+            geo.inBfsID[ni] in Vindices && begin
+                V[n] += Vgeo[ni]
             end
         end
     end # for geo

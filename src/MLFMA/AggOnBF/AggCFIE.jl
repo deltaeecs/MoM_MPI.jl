@@ -1,3 +1,5 @@
+using MoM_Kernels:aggSBFOnLevelCFIE!, acrossbcrossc
+
 """
 计算某层聚合项, 输入为三角形信息和 RWG 基函数信息
 """

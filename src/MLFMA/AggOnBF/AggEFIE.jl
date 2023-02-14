@@ -1,5 +1,5 @@
 using MoM_Basics:getFreeVns, GQ1DID2GQ3DIDVector, getFreeVIDFromGQ3DID
-using MoM_Kernels:aggSBFOnLevel, aggSBFOnLevel!
+using MoM_Kernels:aggSBFOnLevel, aggSBFOnLevel!, aggSBFOnLevelEFIE!
 
 """
 分配并计算叶层聚合项
@@ -17,6 +17,20 @@ function MoM_Kernels.aggSBFOnLevel(level::LT, geosInfo::AbstractVector{VT},
 
     return aggSBF, disaggSBF
 end
+
+"""
+计算某层聚合项, 输入为三角形信息和 RWG 基函数信息
+"""
+function aggSBFOnLevelEFIE(level, trianglesInfo::AbstractVector{TriangleInfo{IT, FT}}, 
+    bfT) where {IT<:Integer, FT<:Real}
+    CT  =   Complex{FT}
+    aggSBF, disaggSBF = allocatePatternOnLeaflevel(level)
+    # 计算
+    aggSBFOnLevelEFIE!(aggSBF, disaggSBF, level, trianglesInfo, bfT)
+
+    return aggSBF, disaggSBF
+end
+
 
 """
 在本进程计算叶层聚合项, 输入为三角形信息和 RWG 基函数信息

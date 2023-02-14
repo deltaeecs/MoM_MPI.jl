@@ -53,6 +53,8 @@ function solve!(A::LinearMapType{T}, x::MPIVector, b::MPIVector;
         end
     end
 
+    MPI.Barrier(comm)
+
     return ICoeff, ch
 
 end

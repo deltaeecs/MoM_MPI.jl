@@ -108,20 +108,6 @@ function calZnearChunkCFIEonCube!(iCube::Int, cubes,
     return nothing
 end
 
-
-# """
-# 采用 RWG 基函数计算指定层内 CFIE 面积分（SIE）阻抗矩阵近场元并将结果放在 ZnearChunk 中
-# """
-# function calZnearChunksCFIEonLevel!(cubes, geosInfo::Vector{GeoangleInfo{IT, FT}},
-#     ZnearChunk, bfT::Type{BFT}) where {IT<:Integer, FT<:Real, BFT<:LinearBasisFunction}
-    
-#     # ZnearCksLocal = localpart(ZnearChunks)
-#     for iCube in localindices(ZnearChunks)[1]
-#         calZnearChunkCFIEonCube!(iCube, cubes, geosInfo, ZnearChunks[iCube], bfT)
-#     end # for
-
-# end # function
-
 """
 采用 RWG 基函数计算指定层内 CFIE 阻抗矩阵近场元并将结果放在 ZnearChunk 中 (分布式)
 """

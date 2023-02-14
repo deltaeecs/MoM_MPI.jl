@@ -40,3 +40,54 @@ macro mpitime(nloop, message, ex, to = TimerOutput())
         end
     )
 end
+
+
+"""
+    gather_Independent_Vectors(vecs; comm = MPI.COMM, rank = rank)
+
+	获取 MPI 进程里的分段向量
+
+TBW
+"""
+function gather_Independent_Vectors(vecs::AbstractVector; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm))
+
+	# 各个 rank 的 vec 的长度
+	rvecls	=	MPI.Allgather(length(vecs), comm)
+	# 所有 vec 的长度
+	vecls	=	zeros(eltype(first(vecs)), sum(rvecls))
+	MPI.Allgatherv!(map(length, vecs), VBuffer(vecls, rvecls), comm)
+	MPI.Barrier(comm)
+	# 每个 vec 的区间
+	intervals 	= 	zeros(Int, length(vecls)+1)
+	cumsum!(view(intervals, 2:(length(vecls)+1)), vecls)
+
+	# 收集 vecs
+	ls		=	MPI.Allgather(sum(length, vecs), comm)
+	data	=	zeros(eltype(first(vecs)), sum(ls))
+	MPI.Allgatherv!(reduce(vcat, vecs), VBuffer(data, ls), comm)
+	
+	# 分割
+	indep_data 	=	map(i -> data[(intervals[i]+1):intervals[i+1]], eachindex(vecls))
+
+	return indep_data
+
+end
+
+"""
+    gather_Independent_Vectors(vecs; comm = MPI.COMM, rank = rank)
+
+	获取 MPI 进程里的分段向量
+
+TBW
+"""
+function gather_Independent_Vectors(vecs::Vector{T}; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm)) where{T<:UnitRange}
+	# 每个rank上的大小
+	ls  	=   MPI.Allgather(length(vecs), comm)
+	# 收集 vecs
+	data 	= 	Vector{UnitRange{eltype(first(vecs))}}(undef, sum(ls))
+	MPI.Allgatherv!(vecs, VBuffer(data, ls), comm)
+	
+	return data
+
+end
+
