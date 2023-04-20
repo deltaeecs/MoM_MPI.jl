@@ -22,7 +22,7 @@ function MoM_Kernels.MLMFAIterator(Znear, octree::OctreeInfo{FT, LT},
     aggSBF, disaggSBF   =   getAggSBFOnLevel(leafLevel, geosInfo)
     
     # 给各层的聚合项、解聚项预分配内存
-    memoryAllocationOnLevels!(nLevels, levels; np = np)
+    memoryAllocationOnLevels!(nLevels, levels; np = np, rank = rank)
     # 给矩阵向量乘积预分配内存
     ZI      =   MPIvecOnLevel(leafLevel; T = Complex{FT})
 
