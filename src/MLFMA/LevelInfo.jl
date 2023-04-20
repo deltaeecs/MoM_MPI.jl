@@ -108,7 +108,8 @@ end
 """
 预分配各层上的聚合项、解聚项
 """
-function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT, LV}; np = MPI.Comm_size(MPI.COMM_WORLD)) where{IT<:Integer, LV<:LevelInfoMPI}
+function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT, LV}; 
+    np = MPI.Comm_size(MPI.COMM_WORLD), rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where{IT<:Integer, LV<:LevelInfoMPI}
 
     # 用到的浮点数类型
     FT = typeof(levels[nLevels].cubeEdgel) 
@@ -126,9 +127,9 @@ function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT
 
         # 开始预分配内存
         # 聚合项
-        aggS    =   mpiarray(Complex{FT}, aggSize; partitation = partitation)
+        aggS    =   mpiarray(Complex{FT}, aggSize; partitation = partitation, rank = rank, np = np)
         # 解聚项
-        disaggG =   mpiarray(Complex{FT}, aggSize; partitation = partitation)
+        disaggG =   mpiarray(Complex{FT}, aggSize; partitation = partitation, rank = rank, np = np)
         # 保存
         level.aggS  =   aggS
         level.disaggG = disaggG
@@ -150,6 +151,12 @@ function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT
 
 end
 
+"""
+    update_local_transInfo_onLevel!(level)
+
+    更新本进程的转移矩阵，只保留本进程用到的部分。
+TBW
+"""
 function update_local_transInfo_onLevel!(level)
     # 本 level 盒子
     cubes = level.cubes
