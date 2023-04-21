@@ -109,7 +109,7 @@ end
 预分配各层上的聚合项、解聚项
 """
 function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT, LV}; 
-    rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where{IT<:Integer, LV<:LevelInfoMPI}
+    comm = MPI.COMM_WROLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where{IT<:Integer, LV<:LevelInfoMPI}
 
     # 用到的浮点数类型
     FT = typeof(levels[nLevels].cubeEdgel) 
