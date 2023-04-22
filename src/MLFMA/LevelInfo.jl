@@ -1,4 +1,4 @@
-using MoM_Kernels:AbstractLevel, CubeInfo, PolesInfo, InterpInfo, memoryAllocationOnLevels!, get_partitation
+using MoM_Kernels:AbstractLevel, CubeInfo, PolesInfo, InterpInfo, memoryAllocationOnLevels!, get_partition
 
 """
 层信息（MPI分布式）
@@ -84,9 +84,9 @@ function loadMPILevel!(level, fn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(co
     # 多极子数
     sizePoles   =   length(level.poles.r̂sθsϕs)
     # 分区
-    partitation =   get_partitation(level.nCubes, sizePoles, np)
+    partition =   get_partition(level.nCubes, sizePoles, np)
 
-    cubes_part  =   rank ÷ partitation[1] + 1
+    cubes_part  =   rank ÷ partition[1] + 1
 
     cubefn = split(fn, ".")[1]*"_Cubes_part_$(cubes_part).jld2"
     # cubes
@@ -123,13 +123,13 @@ function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT
 
         aggSize = (sizePoles, 2, nCubes)
         # 分区
-        partitation =  get_partitation(nCubes, sizePoles, np)
+        partition =  get_partition(nCubes, sizePoles, np)
 
         # 开始预分配内存
         # 聚合项
-        aggS    =   mpiarray(Complex{FT}, aggSize; partitation = partitation, rank = rank, np = np)
+        aggS    =   mpiarray(Complex{FT}, aggSize; partition = partition, rank = rank, np = np)
         # 解聚项
-        disaggG =   mpiarray(Complex{FT}, aggSize; partitation = partitation, rank = rank, np = np)
+        disaggG =   mpiarray(Complex{FT}, aggSize; partition = partition, rank = rank, np = np)
         # 保存
         level.aggS  =   aggS
         level.disaggG = disaggG
