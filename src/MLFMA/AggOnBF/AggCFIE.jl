@@ -19,6 +19,7 @@ end
 function MoM_Kernels.aggSBFOnLevelCFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, level, trianglesInfo::AbstractVector{TriangleInfo{IT, FT}}, 
     ::Type{BFT}) where {IT<:Integer, FT<:Real, BFT<:RWG}
     CT  =   Complex{FT}
+    CT0  = zero(CT)
 
     # 本层盒子信息
     cubes   =   level.cubes
@@ -93,10 +94,10 @@ function MoM_Kernels.aggSBFOnLevelCFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, l
                     # 该多极子
                     poler̂θϕ =   polesr̂sθsϕs[iPole]
                     # 聚合项初始化
-                    aggSθ   =   zero(CT)
-                    aggSϕ   =   zero(CT)
-                    disaggSθ   =   zero(CT)
-                    disaggSϕ   =   zero(CT)
+                    aggSθ   =   CT0
+                    aggSϕ   =   CT0
+                    disaggSθ   =   CT0
+                    disaggSϕ   =   CT0
                     # 对高斯求积点循环
                     for gi in 1:GQPNTri
                         ρi   =   ρs[:, gi]

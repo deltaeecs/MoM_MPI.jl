@@ -38,6 +38,7 @@ end
 function MoM_Kernels.aggSBFOnLevelEFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, level, trianglesInfo::AbstractVector{TriangleInfo{IT, FT}}, 
     ::Type{BFT}) where {IT<:Integer, FT<:Real, BFT<: RWG}
     CT  =   Complex{FT}
+    CT0  = zero(CT)
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
@@ -104,8 +105,8 @@ function MoM_Kernels.aggSBFOnLevelEFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, l
                     # 该多极子
                     poler̂θϕ =   polesr̂sθsϕs[iPole]
                     # 聚合项初始化
-                    aggSθ   =   zero(CT)
-                    aggSϕ   =   zero(CT)
+                    aggSθ   =   CT0
+                    aggSϕ   =   CT0
                     # 对高斯求积点循环
                     for gi in 1:GQPNTri
                         # 公用的 指数项和权重边长
@@ -137,6 +138,7 @@ end
 """
 function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level, tetrasInfo::AbstractVector{TetrahedraInfo{IT, FT, CT}}, 
     ::Type{BFT}) where {IT<:Integer, FT<:Real, CT<:Complex{FT}, BFT<:SWG}
+    CT0  = zero(CT)
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
@@ -214,8 +216,8 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
                     # 该多极子
                     poler̂θϕ =   polesr̂sθsϕs[iPole]
                     # 聚合项初始化
-                    aggSθ   =   zero(CT)
-                    aggSϕ   =   zero(CT)
+                    aggSθ   =   CT0
+                    aggSϕ   =   CT0
                     # 对高斯求积点循环
                     for gi in 1:GQPNTetra
                         # 公用的 指数项和权重边长
@@ -251,6 +253,7 @@ end
 """
 function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level, tetrasInfo::AbstractVector{TetrahedraInfo{IT, FT, CT}}, 
     ::Type{BFT}) where {IT<:Integer, FT<:Real, CT<:Complex{FT}, BFT<:PWC}
+    CT0  = zero(CT)
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
@@ -313,8 +316,8 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
                     # 该多极子
                     poler̂θϕ =   polesr̂sθsϕs[iPole]
                     # 聚合项初始化
-                    aggSθ   =   zero(CT)
-                    aggSϕ   =   zero(CT)
+                    aggSθ   =   CT0
+                    aggSϕ   =   CT0
                     # 对高斯求积点循环
                     for gi in 1:GQPNTetra
                         # 公用的 指数项和权重边长
@@ -351,6 +354,7 @@ end
 function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level, hexasInfo::AbstractVector{HexahedraInfo{IT, FT, CT}}, 
     ::Type{BFT}) where {IT<:Integer, FT<:Real, CT<:Complex{FT}, BFT<:PWC}
     # 本层盒子信息
+    CT0  = zero(CT)
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
     cubeIndices::UnitRange{Int} =   level.cubes.indices
@@ -410,8 +414,8 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
                     # 该多极子
                     poler̂θϕ =   polesr̂sθsϕs[iPole]
                     # 聚合项初始化
-                    aggSθ   =   zero(CT)
-                    aggSϕ   =   zero(CT)
+                    aggSθ   =   CT0
+                    aggSϕ   =   CT0
                     # 对高斯求积点循环
                     for gi in 1:GQPNHexa
                         # 公用的 指数项和权重边长
@@ -448,6 +452,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     ::Type{BFT}) where {VT<:HexahedraInfo, BFT<:RBF}
 
     CT = eltype(aggSBF)
+    CT0  = zero(CT)
     # 本层盒子信息
     cubes   =   level.cubes
     # 本进程分配到的盒子id     
@@ -530,8 +535,8 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
                     # 该多极子
                     poler̂θϕ =   polesr̂sθsϕs[iPole]
                     # 聚合项初始化
-                    aggSθ   =   zero(CT)
-                    aggSϕ   =   zero(CT)
+                    aggSθ   =   CT0
+                    aggSϕ   =   CT0
                     # 对高斯求积点循环
                     for gi in 1:GQPNHexa
                         # 公用的 指数项和权重边长
