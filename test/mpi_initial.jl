@@ -2,7 +2,7 @@
 using MPI, MPIArray4MoMs, MoM_MPI
 using TimerOutputs, JLD2
 using LinearAlgebra
-using .Threads, MKL, MKLSparse
+using .Threads
 
 
 # * 初始化MPI包
