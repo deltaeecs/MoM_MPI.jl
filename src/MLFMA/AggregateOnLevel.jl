@@ -1,5 +1,6 @@
 include("AggOnBF/AggEFIE.jl")
 include("AggOnBF/AggCFIE.jl")
+include("AggOnBF/AggMFIE.jl")
 
 """
 在所有分配叶层辐射或接收积分内存
@@ -69,8 +70,7 @@ function MoM_Kernels.getAggSBFOnLevel(level::LT, geosInfo::AbstractVector{ST},
     if SimulationParams.ieT == :EFIE
         return aggSBFOnLevelEFIE(level, geosInfo, bfT)
     elseif SimulationParams.ieT == :MFIE
-        throw("暂未支持单独 MFIE 的分布式计算")
-        # return aggSBFOnLevelMFIE(level, geosInfo, bfT)
+        return aggSBFOnLevelMFIE(level, geosInfo, bfT)
     elseif SimulationParams.ieT == :CFIE
         return aggSBFOnLevelCFIE(level, geosInfo, bfT)
     end

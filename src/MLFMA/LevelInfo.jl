@@ -1,22 +1,32 @@
 using MoM_Kernels:AbstractLevel, CubeInfo, PolesInfo, InterpInfo, memoryAllocationOnLevels!, get_partition
 
 """
-层信息（MPI分布式）
+    struct LevelInfoMPI{IT<:Integer, FT<:Real} <: AbstractLevel
 
-ID          ::IT，层序号
-L           ::IT, 本层截断项数
-cubes       ::PartitionedVector{Vector{CubeInfo{IT, FT}}, IDCSCT} 包含每一个盒子信息的向量
-cubeEdgel   ::FT，本层盒子的边长
-poles       ::PolesInfo{IT, FT}, 多极子采样信息
-interpWθϕ   ::InterpInfo{IT, FT}, 插值信息
-aggS        ::MPIArray{Complex{FT}, 3, ...}， 聚合项
-disaggG     ::MPIArray{Complex{FT}, 3, ...}， 解聚项
-phaseShift2Kids  ::Array{Complex{FT}, 3}，本层盒子到子层盒子的相移因子 
-αTrans      ::Array{Complex{FT}, 3}， 本层盒子远亲组之间的转移因子，根据相对位置共有 7^3 - 3^3 = 316 个
-αTransIndex ::Array{IT, 2}, 远亲盒子的相对位置到其转移因子在所有转移因子数组的索引
+层信息（MPI分布式）：
+```
+ID          ::IT
+isleaf      ::Bool
+L           ::IT
+nCubes      ::IT
+cubes       ::PartitionedVector{CubeInfo{IT, FT}}
+cubeEdgel   ::FT
+poles       ::PolesInfo{FT}
+interpWθϕ   ::InterpInfo{IT, FT}
+aggS        ::MPIArray{Complex{FT}, NTuple{3, UnitRange{Int64}}, 3, SubArray{Complex{FT}, 3, Array{Complex{FT}, 3}, NTuple{3, UnitRange{Int64}}, false}, NTuple{3, UnitRange{Int64}}}
+aggStransfer::PatternTransfer{Complex{FT}, Tuple{Vector{Int64}, UnitRange{Int64}, UnitRange{Int64}}}
+disaggG     ::MPIArray{Complex{FT}, NTuple{3, UnitRange{Int64}}, 3, SubArray{Complex{FT}, 3, Array{Complex{FT}, 3}, NTuple{3, UnitRange{Int64}}, false}, NTuple{3, UnitRange{Int64}}}
+disaggGtransfer     ::PatternTransfer{Complex{FT}, Tuple{Vector{Int64}, UnitRange{Int64}, UnitRange{Int64}}}
+phaseShift2Kids     ::Matrix{Complex{FT}}
+phaseShiftFromKids  ::Matrix{Complex{FT}}
+αTrans      ::Matrix{Complex{FT}}
+αTransTransfer ::PatternTransfer{Complex{FT}, Tuple{UnitRange{Int64}, UnitRange{Int64}, Vector{Int64}}}
+αTransIndex ::OffsetArray{IT, 3, Array{IT, 3}}
+```
 """
 mutable struct LevelInfoMPI{IT<:Integer, FT<:Real} <: AbstractLevel
     ID          ::IT
+    isleaf      ::Bool
     L           ::IT
     nCubes      ::IT
     cubes       ::PartitionedVector{CubeInfo{IT, FT}}
@@ -33,40 +43,32 @@ mutable struct LevelInfoMPI{IT<:Integer, FT<:Real} <: AbstractLevel
     αTransTransfer ::PatternTransfer{Complex{FT}, Tuple{UnitRange{Int64}, UnitRange{Int64}, Vector{Int64}}}
     αTransIndex ::OffsetArray{IT, 3, Array{IT, 3}}
     LevelInfoMPI{IT, FT}() where {IT<:Integer, FT<:Real} = new{IT, FT}()
-    LevelInfoMPI{IT, FT}(   ID, L, nCubes, cubes, cubeEdgel, poles, interpWθϕ, aggS, aggStransfer, disaggG,
+    LevelInfoMPI{IT, FT}(   ID, isleaf, L, nCubes, cubes, cubeEdgel, poles, interpWθϕ, aggS, aggStransfer, disaggG,
                         disaggGtransfer, phaseShift2Kids, phaseShiftFromKids, αTrans, αTransTransfer,  αTransIndex) where {IT<:Integer, FT<:Real} = 
-                new{IT, FT}(ID, L, nCubes, cubes, cubeEdgel, poles, interpWθϕ, aggS, aggStransfer, disaggG,
+                new{IT, FT}(ID, isleaf, L, nCubes, cubes, cubeEdgel, poles, interpWθϕ, aggS, aggStransfer, disaggG,
                         disaggGtransfer, phaseShift2Kids, phaseShiftFromKids, αTrans,  αTransIndex)
 end
 
 """
     getFarNeighborCubeIDs(cubes, chunkIndice)
 
-    获取 ckunkIndice 内的所有 cube 的 远亲盒子ID， 返回为 Tuple 形式以适应数组索引相关API
-
-TBW
+获取 ckunkIndice 内的所有 cube 的 远亲盒子ID， 返回为 Tuple 形式以适应数组索引相关API
 """
 function getFarNeighborCubeIDs(cubes, chunkIndice::Tuple)
-
     farneighborCubeIDs = reduce(vcat, cubes[i].farneighbors for i in chunkIndice[1])
-
     return (unique!(sort!(farneighborCubeIDs)), )
-
 end
 
 
 """
     loadMPICubes(cubefn)
 
-    载入 cubes 数组
+载入 cubes 数组
 """
 function loadCubes(cubefn)
-
     # Cubes
     cubes       = load(cubefn, "data")
-
     return cubes
-
 end
 
 function loadMPILevel!(level, fn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm))
@@ -84,11 +86,10 @@ function loadMPILevel!(level, fn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(co
     # 多极子数
     sizePoles   =   length(level.poles.r̂sθsϕs)
     # 分区
-    partition =   get_partition(level.nCubes, sizePoles, np)
-
+    partition =   get_partition(level.nCubes, sizePoles, np; isleaf = level.isleaf)
+    # 本 rank 是第几个 cube 分区
     cubes_part  =   rank ÷ partition[1] + 1
-
-    cubefn = split(fn, ".")[1]*"_Cubes_part_$(cubes_part).jld2"
+    cubefn = split(normpath(fn), ".")[1]*"_Cubes_part_$(cubes_part).jld2"
     # cubes
     cubes = loadCubes(cubefn)
     level.cubes = cubes
@@ -96,6 +97,11 @@ function loadMPILevel!(level, fn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(co
     return level
 end
 
+"""
+    loadMPILevel(fn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm))
+
+载入 MPI 层。
+"""
 function loadMPILevel(fn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm))
 
     level = LevelInfoMPI{Int, Precision.FT}()
@@ -120,10 +126,10 @@ function MoM_Kernels.memoryAllocationOnLevels!(nLevels::Integer, levels::Dict{IT
         nCubes  =   level.nCubes
         # 多极子数
         sizePoles   =   length(level.poles.r̂sθsϕs)
-
-        aggSize = (sizePoles, 2, nCubes)
+        # 辐射函数 size
+        aggSize     =   (sizePoles, 2, nCubes)
         # 分区
-        partition =  get_partition(nCubes, sizePoles, np)
+        partition   =   get_partition(nCubes, sizePoles, np; isleaf = level.isleaf)
 
         # 开始预分配内存
         # 聚合项

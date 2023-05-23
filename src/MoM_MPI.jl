@@ -1,12 +1,14 @@
 module MoM_MPI
 
+using Reexport
 using MoM_Basics, MoM_Kernels
-using MPI, MPIArray4MoMs
-using OffsetArrays, SparseArrays
+using MPI, OffsetArrays, SparseArrays
 using LinearAlgebra
 using .Threads, ThreadsX, FLoops, FoldsThreads
 using UnPack, JLD2, ProgressMeter, Printf
 using IterativeSolvers
+
+@reexport using MPIArray4MoMs
 
 export  MPIvecOnLevel,
         initialZnearChunksMPI, calZnearChunks!,

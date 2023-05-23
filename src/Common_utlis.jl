@@ -1,8 +1,7 @@
 """
 	getGhostMPIVecs(y::MPIVector{T, I, DT, IG}) where {T, I, DT, IG}
 	
-	这里必须注明类型以稳定计算。
-TBW
+这里必须注明类型以稳定计算，仅限本包使用。
 """
 function getGhostMPIVecs(y::MPIVector{T, I, DT, IG}) where {T, I, DT, IG}
 	sparsevec(y.ghostindices[1], y.ghostdata)::SparseVector{T, Int}
@@ -20,13 +19,12 @@ end
 
 
 """
-	创建宏用于 MPI 测速
 	mpitime(nloop, message, ex)
 
-	nloop 测试循环数
-	message 展示信息
-	ex 测试表达式
-
+创建宏用于 MPI 测速
+`nloop` 测试循环数
+`message` 展示信息
+`ex` 测试表达式
 """
 macro mpitime(nloop, message, ex, to = TimerOutput())
     esc(
@@ -45,9 +43,7 @@ end
 """
     gather_Independent_Vectors(vecs; comm = MPI.COMM, rank = rank)
 
-	获取 MPI 进程里的分段向量
-
-TBW
+获取 MPI 进程里的分段向量
 """
 function gather_Independent_Vectors(vecs::AbstractVector; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm))
 
@@ -76,9 +72,7 @@ end
 """
     gather_Independent_Vectors(vecs; comm = MPI.COMM, rank = rank)
 
-	获取 MPI 进程里的分段向量
-
-TBW
+获取 MPI 进程里的分段向量
 """
 function gather_Independent_Vectors(vecs::Vector{T}; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm)) where{T<:UnitRange}
 	# 每个rank上的大小

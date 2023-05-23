@@ -122,7 +122,6 @@ function MoM_Kernels.aggSBFOnLevelEFIE!(aggSBF::MPIArray, disaggSBF::MPIArray, l
             end # ni
         end #iTri
 
-
         # 更新进度条
         next!(pmeter)
     end #iCube
@@ -446,7 +445,7 @@ end
 
 
 """
-在本进程计算叶层聚合项, 输入为四面体信息和 SWG 基函数信息
+在本进程计算叶层聚合项, 输入为六面体信息和 RBF 基函数信息
 """
 function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level, hexasInfo::AbstractVector{VT}, 
     ::Type{BFT}) where {VT<:HexahedraInfo, BFT<:RBF}
@@ -476,7 +475,7 @@ function MoM_Kernels.aggSBFOnLevel!(aggSBF::MPIArray, disaggSBF::MPIArray, level
     
     # 进度条
     pmeter  =   Progress(length(cubeIndices); dt = 1, desc = "Agg on rank $(aggSBF.myrank) RBF (Hexa + EFIE)...", barglyphs=BarGlyphs("[=> ]"), color = :blue)
-    for iCube in cubeIndices 
+    for iCube in cubeIndices
         # 盒子
         cube    =   cubes[iCube]
         # 盒子中心

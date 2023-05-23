@@ -257,8 +257,6 @@ function calZnearChunkEFIEonCube!(iCube::Int, cubes,
     return nothing
 end
 
-
-
 """
 采用 PWC 基函数计算四面体 EFIE 的体积分（VIE）阻抗矩阵近场元并将结果放在Znear稀疏矩阵中
 """
@@ -725,7 +723,7 @@ end
 
 
 """
-采用 基函数计算指定层内 EFIE 阻抗矩阵近场元并将结果放在 ZnearChunk 中 (分布式)
+采用 基函数计算指定层内 EFIE 阻抗矩阵近场元并将结果放在 ZnearChunk 中 (MPI)
 """
 function calZnearChunksEFIE!(cubes, geosInfo::AbstractVector{GT},
     ZnearChunks::MPIVector, bfT::Type{BFT}) where {GT<:VSCellType, BFT<:BasisFunctionType}
@@ -751,7 +749,10 @@ end # function
 
 
 """
-采用 基函数计算指定层内 EFIE 阻抗矩阵近场元并将结果放在 ZnearChunk 中 (分布式)
+    calZnearChunksEFIE!(cubes, geosInfo1::AbstractVector{T1}, geosInfo2::AbstractVector{T2},
+    ZnearChunks::MPIVector, bfT::Type{BFT}) where {T1 <: VSCellType, T2 <: VSCellType, BFT<:BasisFunctionType}
+
+采用指定的 `bfT` 基函数计算指定层内 EFIE 阻抗矩阵近场元并将结果放在 `ZnearChunks` 中 (MPI)
 """
 function calZnearChunksEFIE!(cubes, geosInfo1::AbstractVector{T1}, geosInfo2::AbstractVector{T2},
     ZnearChunks::MPIVector, bfT::Type{BFT}) where {T1 <: VSCellType, T2 <: VSCellType, BFT<:BasisFunctionType}

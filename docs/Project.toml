@@ -1,0 +1,7 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"
+MoM_Basics = "84796d1e-6a74-43fe-971c-cdafebd16eaa"
+MoM_Kernels = "831fc53b-0fa6-4fbb-adc4-fa1e0b19763e"
+MPIArray4MoMs = "b7f3fe35-ff1f-4dc5-b861-bd211d5a9a4b"
+MoM_MPI = "307724fd-586d-46f6-8b3d-ea3ff22db83d"

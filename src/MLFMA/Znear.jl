@@ -206,7 +206,6 @@ end
 """
     MPIvecOnLevel(level; T = Precision.CT, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm))
 
-
 生成按层内盒子的划分分配的 MPI 向量, 该向量的 ghostdata 包括邻盒子部分，用于矩阵向量乘积计算。
 """
 function MPIvecOnLevel(cubes::PartitionedVector{C}; T = Precision.CT, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where {C<:CubeInfo}
@@ -249,7 +248,6 @@ end
 
 """
     MPIvecOnLevel(level; T = Precision.CT, comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm))
-
 
 生成按层内盒子的划分分配的 MPI 向量, 该向量的 ghostdata 包括邻盒子部分，用于矩阵向量乘积计算。
 """
@@ -305,10 +303,10 @@ function calZnearChunks!(cubes, geosInfo::AbstractVector{VT},
     ZnearChunks, bfT::Type{BFT} = VSBFTypes.vbfType) where {BFT<:BasisFunctionType, VT<:AbstractVector}
     # 计算 RWG + PWC/RBF 下的 EFIE 阻抗矩阵
     calZnearChunksEFIE!(cubes, geosInfo..., ZnearChunks.chunks, bfT)
-
     nothing
 end
 
 include("ZChunks/ZnearChunkEFIE.jl")
+include("ZChunks/ZnearChunkMFIE.jl")
 include("ZChunks/ZnearChunkCFIE.jl")
 include("ZChunks/ZnearChunkEFIEVSIE.jl")

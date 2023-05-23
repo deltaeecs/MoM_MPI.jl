@@ -1,6 +1,6 @@
 include("ExcitedVectors/CFIEExcitedVectors.jl")
 include("ExcitedVectors/EFIEExcitedVectors.jl")
-
+include("ExcitedVectors/MFIEExcitedVectors.jl")
 
 """
 根据几何信息与基函数数量，计算激励向量
