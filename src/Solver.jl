@@ -10,7 +10,7 @@ using IterativeSolvers:Identity
 function MoM_Kernels.saveCurrent(ICurrent::MPIVector; dir = "temp/results", str = "", root = 0, rank = ICurrent.myrank)
     ICurrentRoot = gather(ICurrent)
     !ispath(dir) && mkpath(dir)
-    rank == root && jldsave(joinpath(dir, "ICurrent$str.jld2"); ICurrent = ICurrentRoot)
+    rank == root && jldsave(normpath(joinpath(dir, "ICurrent$str.jld2")); ICurrent = ICurrentRoot)
 end
 
 """
