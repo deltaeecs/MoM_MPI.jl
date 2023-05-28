@@ -89,7 +89,7 @@ function loadMPILevel!(level, fn; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(co
     partition =   get_partition(level.nCubes, sizePoles, np; isleaf = level.isleaf)
     # 本 rank 是第几个 cube 分区
     cubes_part  =   rank ÷ partition[1] + 1
-    cubefn = split(normpath(fn), ".")[1]*"_Cubes_part_$(cubes_part).jld2"
+    cubefn = joinpath(dirname(fn), split(basename(fn), ".")[1]*"_Cubes_part_$(cubes_part).jld2")
     # cubes
     cubes = loadCubes(cubefn)
     level.cubes = cubes
