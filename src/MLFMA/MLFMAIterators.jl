@@ -8,7 +8,7 @@ include("IterateOnOctree.jl")
 """
 实现矩阵向量乘积，并封装为线性算子
 """
-function MoM_Kernels.MLMFAIterator(Znear, octree::OctreeInfo{FT, LT}, 
+function MoM_Kernels.MLFMAIterator(Znear, octree::OctreeInfo{FT, LT}, 
     geosInfo::AbstractVector; comm = MPI.COMM_WORLD, rank = MPI.Comm_rank(comm), np = MPI.Comm_size(comm)) where {FT<:Real, LT<:LevelInfoMPI}
     
     # 叶层ID
@@ -26,7 +26,7 @@ function MoM_Kernels.MLMFAIterator(Znear, octree::OctreeInfo{FT, LT},
     # 给矩阵向量乘积预分配内存
     ZI      =   MPIvecOnLevel(leafLevel; T = Complex{FT})
 
-    Zopt    =   MLMFAIterator{Complex{FT}, MPIVector}(octree, Znear, geosInfo, Int[], aggSBF, disaggSBF, ZI)
+    Zopt    =   MLFMAIterator{Complex{FT}, MPIVector}(octree, Znear, geosInfo, Int[], aggSBF, disaggSBF, ZI)
 
     return Zopt
 

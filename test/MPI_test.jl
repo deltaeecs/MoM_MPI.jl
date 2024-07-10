@@ -44,7 +44,7 @@ using Test
     @test true
 
     # 构建矩阵向量乘积算子
-    Zopt  =   MLMFAIterator(ZnearChunksMPI, octree, geosInfo; np = ParallelParams.nprocs);
+    Zopt  =   MLFMAIterator(ZnearChunksMPI, octree, geosInfo; np = ParallelParams.nprocs);
     @test true
 
     fill!(ICoeff, 1)
