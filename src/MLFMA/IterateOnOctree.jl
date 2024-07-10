@@ -394,7 +394,7 @@ end
 """
 计算远区矩阵向量乘积
 """
-function MoM_Kernels.calZfarI!(Zopt::MLMFAIterator{ZT, MT}, IVec::SubOrMPIVector; setzero = true) where {ZT, MT<:MPIVector}
+function MoM_Kernels.calZfarI!(Zopt::MLFMAIterator{ZT, MT}, IVec::SubOrMPIVector; setzero = true) where {ZT, MT<:MPIVector}
     
     # 计算前置零
     setzero && fill!(Zopt.ZI, zero(ZT))
